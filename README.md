@@ -5,23 +5,24 @@ This is an AWS Lambda Function (more specifically, a zipped uploadable python en
 ## Overview and Introduction
 The process of transferring data from a .csv file (for example) into a data table in dynamoDB (an AWS database) is not simple. Going the other way, making a .csv from a table is very simple, just one "make a .csv" button to push. 
 
-The goal here has been to automate and streamline the process. 
+#### The goal here has been to automate and streamline the process of entering a .csv file into AWS (into a dynamoDB table) to make it as effortless as possible. Ideally: put the .cvs files into a folder, push the proverbial or literal 'Start' button, and that's it. 
 
-Yes, you cannot take any old random file and expect it to go cleanly into an SQL or NoSQL database. BUT it is very reasonable to say that even a non-technically-inclined person can check a .csv to make sure it has the appropriate properties.
+#### Yes, you cannot take any old random file and expect it to go cleanly into an SQL or NoSQL database. But I contend that it is very reasonable to say that even a non-technically-inclined person can check a .csv file to see it has the appropriate properties.
 
-## list of properties a .csv file need for it to be ready to be entered into a database table
+# List of properties a .csv file need to have for it to be ready to be entered into a database table (using this automated system):
 1. the name of the .csv file must be formatted to be also the name of the table
 2. the first column of the .csv will be the primary key
-3. the first column (being the primary key) be all unique items, no missing item, and must be all the same data type (e.g. no text strings mixed into otherwise all integers). 
+3. the first column (being the primary key) must be made of unique items, no missing items, and must be all the same data type (e.g. no text strings mixed into otherwise all integers). 
 4. the data-types for the columns must be either correctly automatically detectable, or set by you in a simple metadata_file. 
 
-#### Tools for this simple inspection are included in this github repo there are datatype-tester tools, either for google colab, a local python notebook, or a local .py file. 
+#### Tools for a simple inspection of the above properties are included in this github repo. These datatype-tester tools can be used either for google colab, a local python notebook, or a local .py file. 
 
 #### Once this is done, then any number of these checked and clean files should be able to be automatically loaded into AWS. 
 
 
+# Deploying the python ENV into AWS:
 
-The env file is split into small parts for easier uploading and downloading.
+#### The env file is split into small parts for easier uploading and downloading.
 Follow these instructions 
 ```
 https://github.com/lineality/linux_make_split_zip_archive_multiple_small_parts_for_AWS
