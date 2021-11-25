@@ -2,6 +2,24 @@
 
 This is an AWS Lambda Function (more specifically, a zipped uploadable python environment file for an AWS Lambda Function) that will automatically load a cleaned .csv file into a table (which the tool creates) in AWS dynamoDB (a NoSQL database).
 
+## Overview and Introduction
+The process of transferring data from a .csv file (for example) into a data table in dynamoDB (an AWS database) is not simple. Going the other way, making a .csv from a table is very simple, just one "make a .csv" button to push. 
+
+The goal here has been to automate and streamline the process. 
+
+Yes, you cannot take any old random file and expect it to go cleanly into an SQL or NoSQL database. BUT it is very reasonable to say that even a non-technically-inclined person can check a .csv to make sure it has the appropriate properties.
+
+## list of properties a .csv file need for it to be ready to be entered into a database table
+1. the name of the .csv file must be formatted to be also the name of the table
+2. the first column of the .csv will be the primary key
+3. the first column (being the primary key) be all unique items, no missing item, and must be all the same data type (e.g. no text strings mixed into otherwise all integers). 
+4. the data-types for the columns must be either correctly automatically detectable, or set by you in a simple metadata_file. 
+
+#### Tools for this simple inspection are included in this github repo there are datatype-tester tools, either for google colab, a local python notebook, or a local .py file. 
+
+#### Once this is done, then any number of these checked and clean files should be able to be automatically loaded into AWS. 
+
+
 
 The env file is split into small parts for easier uploading and downloading.
 Follow these instructions 
