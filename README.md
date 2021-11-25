@@ -1,9 +1,9 @@
 # env_aws_lambda_auto_load_csv_to_dynamodb
 
-This is an AWS Lambda Function (more specifically, a zipped uploadable python environment file for an AWS Lambda Function) that will automatically load a cleaned .csv file into a table (which the tool creates) in AWS dynamoDB (a NoSQL database).
+#### This is an AWS Lambda Function (more specifically, a zipped uploadable python environment file for an AWS Lambda Function) that will automatically load a cleaned .csv file into a table (which the tool creates) in AWS dynamoDB (a NoSQL database).
 
 ## Overview and Introduction
-The process of transferring data from a .csv file (for example) into a data table in dynamoDB (an AWS database) is not simple. Going the other way, making a .csv from a table is very simple, just one "make a .csv" button to push. 
+#### The process of transferring data from a .csv file (for example) into a data table in dynamoDB (an AWS database) is not simple. Going the other way, making a .csv from a table is very simple, just one "make a .csv" button to push. Both should be easy.
 
 #### The goal here has been to automate and streamline the process of entering a .csv file into AWS (into a dynamoDB table) to make it as effortless as possible. Ideally: put the .cvs files into a folder, push the proverbial or literal 'Start' button, and that's it. 
 
@@ -20,10 +20,23 @@ The process of transferring data from a .csv file (for example) into a data tabl
 And there's an online colab here:
 https://colab.research.google.com/drive/18UwXMKqD-DLBs29RZYHa9RqrVdYa8rvK#scrollTo=_1r1SEvqCfdC
 
-#### Once this is done, then any number of these checked and clean files should be able to be automatically loaded into AWS. 
+#### Once this is done, then any number of these checked and clean files should be able to be automatically processed to have the data loaded into database tables in AWS.
 
 
 # Deploying the python ENV into AWS:
+
+Making an AWS lambda function is not too difficult but there should be instructions for that...(pending). 
+## Roughly:
+1. go to aws
+2. go to lambda functions
+3. create a function
+4. select that it be a python 3.8 function
+5. add some permissions (see details below)
+6. create the function
+7. upload a zip file containing your function (provides as files in this repo, see below)
+8. you can run it like that, or make an api-gateway endpoint (and a colab to use that endpoint...optionally)
+
+You will also need to know how to load files into S3 (file storage in AWS).
 
 #### The env file is split into small parts for easier uploading and downloading.
 Follow these instructions 
