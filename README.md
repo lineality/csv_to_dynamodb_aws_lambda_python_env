@@ -9,13 +9,16 @@ The process of transferring data from a .csv file (for example) into a data tabl
 
 #### Yes, you cannot take any old random file and expect it to go cleanly into an SQL or NoSQL database. But I contend that it is very reasonable to say that even a non-technically-inclined person can check a .csv file to see it has the appropriate properties.
 
-# List of properties a .csv file need to have for it to be ready to be entered into a database table (using this automated system):
+# List of properties a .csv file needs to have for it to be ready to be entered into a database table (using this automated system):
 1. the name of the .csv file must be formatted to be also the name of the table
 2. the first column of the .csv will be the primary key
 3. the first column (being the primary key) must be made of unique items, no missing items, and must be all the same data type (e.g. no text strings mixed into otherwise all integers). 
 4. the data-types for the columns must be either correctly automatically detectable, or set by you in a simple metadata_file. 
 
-#### Tools for a simple inspection of the above properties are included in this github repo. These datatype-tester tools can be used either for google colab, a local python notebook, or a local .py file. 
+#### Tools for a simple inspection of the above properties are included in this github repo. These datatype-tester tools can be used in google colab, a local python notebook, or a local .py file (e.g. for files too large for colab). 
+
+And there's an online colab here:
+https://colab.research.google.com/drive/18UwXMKqD-DLBs29RZYHa9RqrVdYa8rvK#scrollTo=_1r1SEvqCfdC
 
 #### Once this is done, then any number of these checked and clean files should be able to be automatically loaded into AWS. 
 
