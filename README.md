@@ -88,11 +88,8 @@ item_number, N
 
 
 ## Rules / Instructions
-Instruction for using the Tool:
+#### Instruction for using the Tool:
 
-Please read and follow these instructions, and please tell me about any errors you recieve. 
-
-## Rules / Instructions
 1. file input must be one or more .csv files (no other formats)
 
 2. file input must be in a directory in S3
