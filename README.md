@@ -86,9 +86,10 @@ item_id, S
 item_number, N
 ```
 
+# Rules / Instructions
+Instruction for using the .csv auto-load Tool:
 
-## Rules / Instructions
-#### Instruction for using the Tool:
+Please read and follow these instructions, and please tell me about any errors you recieve. 
 
 1. file input must be one or more .csv files (no other formats)
 
@@ -98,18 +99,30 @@ item_number, N
 
 4. directories & api-input: the json input for the lambda function(or endpoint)
 must look like this
+```
 {
   "S3_BUCKET_NAME": "YOUR_S3_BUCKET_NAME_HERE",
   "target_directory": "YOUR_FOLDER_NAME_HERE/"
 }
-
+```
 You can also make or use more sub-folders (directories) to organize your files. In this case combine all folders (the path) to the target directory
-
+```
 {
   "S3_BUCKET_NAME": "YOUR_S3_BUCKET_NAME_HERE",
   "target_directory": "YOUR_FOLDER_NAME_HERE/YOUR_SUB_FOLDER_NAME_HERE/"
 }
-
+```
+Here is an example using all optional fields (to be explained below):
+```
+{
+  "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
+  "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
+  "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/",
+  "multicsv_table_or_from_to_in_csv_flag": "True",
+  "FROM_here_in_csv": 0,
+  "TO_here_in_csv": 4
+}
+```
 
 5. The csv-tool make a data-table in an AWS-database from your .csv file. Make the name of your .csv file the same as what you want the AWS database table to be called. The name of each file must be:
 ```
@@ -130,10 +143,29 @@ e.g.
 "default_folder_for_completed_csv_files" : "THIS_FOLDER/"
 Files not yet moved into AWS will remain in the original directory. 
 Please do NOT change the the destination folder to be INSIDE of your sub-folder.
+e.g.
+```
+{
+  "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
+  "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
+  "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/"
+}
+```
 
-9. Please read the output of the function clearly (to see if there was an error or if the process completed). Some errors will regard your files and you can fix them. Other errors may indicate updates needed for the tool. Please report all errors we can understand this new process well. 
+9. Please read the output of the function clearly (to see if there was an error or if the process completed). Some errors will regard your files and you can fix them. Other errors may indicate updates needed for the tool. Please report all errors we can understand this process well. 
 
 10. Please check the new data-tables in AWS to make sure they look as you want them to look. 
+
+11. The default mode is to put one data-csv file into one dynamoDB table, however you can select from-to for which rows you want to select to upload. This function also works to put two data-csv files into the SAME table BUT: be careful not to overwrite an existing table, and multiple component files (when putting multiple data-csv files into one dynamoDB table) must be given the same name and individually put into S3 and run separately. (Note: separate functionality could be made to combine many small files into one table but usually this is used when csv files are too BIG to load in all at one time. Not being able to load the table all at once -> you can now load the table in separate batches. You need to set a multfile flag and (optionally) select from and to with your inputs. Starting at 1 or 0 have the same effect, starting from the begining. 
+```
+{
+  "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
+  "target_directory": "YOUR_FOLDER/OPTIONAL_SUB_FOLDER/",
+  "multicsv_table_or_from_to_in_csv_flag": "True",
+  "FROM_here_in_csv": 3,
+  "TO_here_in_csv": 7
+}
+```
 
 ## workflow
 1. pre-emptively clear the /tmp/ directory in lambda-function (OK)
