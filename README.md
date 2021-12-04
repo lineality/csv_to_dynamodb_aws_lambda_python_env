@@ -118,7 +118,7 @@ Here is an example using all optional fields (to be explained below):
   "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
   "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/",
-  "multicsv_table_or_from_to_in_csv_flag": "True",
+  "multi_part_or_split_csv_flag": "True",
   "FROM_here_in_csv": 0,
   "TO_here_in_csv": 4
 }
@@ -161,14 +161,30 @@ e.g.
 {
   "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_FOLDER/OPTIONAL_SUB_FOLDER/",
-  "multicsv_table_or_from_to_in_csv_flag": "True",
+  "multi_part_or_split_csv_flag": "True",
   "FROM_here_in_csv": 3,
   "TO_here_in_csv": 7
 }
 ```
 
+12. Split Files: Sometimes csv files are very large and it is best to split them into pieces to deal with them. 
+This csv uploader tool is designed to work with this csv splitter:
+https://github.com/lineality/split_csv_python_script 
+
+As a rule of thumb
+if you csv file has more then 10,000 rows, 
+then split the file up, put all the split files into the target direction, 
+hit GO (proverbially) and the tool will put them all into the same table.
+
+To do this you must
+- set the multi_part_or_split_csv_flag flag to True in the intput
+- have each part suffixed with _split__###.csv (any method resulting in that will work. 
+
+If there are many parts and the tool times out, just keep running it until all the parts get completed and moved to the 'completed files" folder.
+
+
 # Workflow
-1. pre-emptively clear the /tmp/ directory in lambda-function 
+1. preemptively clear the /tmp/ directory in lambda-function 
 2. user inputs a folder (a target s3 directory, in which are .csv files) 
 3. scan S3 folder for .csv files 
 4. make a list of .csv files NOT including "metadata_" at the start. We will later iterate through this file 3 times. 
@@ -180,13 +196,19 @@ e.g.
 
 #### The next steps are done for each (iterating through each) data file in the 3rd and last pass through the list of data-csv files:
 
-10. The primarny-key column/field is error-checked for 3 types of primary key errors and gives the user a warning to fix the file: missing data, duplicate rows, and mixed text/number data (e.g. text in a number column). Finding and outputting a warning here halts the whole process, so not all files will have been checked. 
+10. The primary-key column/field is error-checked for 3 types of primary key errors and gives the user a warning to fix the file: missing data, duplicate rows, and mixed text/number data (e.g. text in a number column). Finding and outputting a warning here halts the whole process, so not all files will have been checked. 
 
 11. lambda creates a new dynamoDB table with a name the same as the .csv file. Note: extra logic to skip this for from-to or multi-file-to-one-table input.
 12. lambda uses metadata_ file and data-csv file to load data into dynamoDB. Note: by default this is the whole file, but optionally a from_row and to_row can be specified by row number in csv
-13. after file is loaded successfully into dynamoDB, data-csv and metadata_csv are moved to a new directory (folder) called 'tranferred files' (or whatever the name ends up being) (this involves copying to the new location and then deleting the old file from S3). Note: this is skipped when using from-to or multi-file-to-one-table as the whole upload process is not completed in one step.
+13. after file is loaded successfully into dynamoDB, data-csv and metadata_csv are moved to a new directory (folder) called 'transferred files' (or whatever the name ends up being) (this involves copying to the new location and then deleting the old file from S3). Note: this is skipped when using from-to or multi-file-to-one-table as the whole upload process is not completed in one step.
 14. the aws Lambda /tmp/ copy of the file is deleted (to not overwhelm the fragile lambda-function)
 
 #### These steps are done at the very end of the whole process after all files are processed (if there is no error that stops the process)
 15. remove all files from lambda /tmp/ directory
 16. output: list of tables created OR error message
+
+
+
+
+
+
