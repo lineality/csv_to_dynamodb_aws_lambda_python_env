@@ -1,5 +1,6 @@
 """
-v1096 2021.12.03
+v11
+2021.12.04
 dynamic .csv to AWS dynamoDB - AWS-lambda-function
 
 lambda function will need these permissions:
@@ -47,14 +48,14 @@ or: if you are going from_to within an input file
   "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
   "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/",
-  "multicsv_table_or_from_to_in_csv_flag": "True"
+  "multi_part_or_split_csv_flag": "True"
 }
 or: if you are going from_to within an input file
 {
   "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
   "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/",
-  "multicsv_table_or_from_to_in_csv_flag": "True",
+  "multi_part_or_split_csv_flag": "True",
   "FROM_here_in_csv": 0,
   "TO_here_in_csv": 4
 }
@@ -62,7 +63,7 @@ or: if you are going from_to within an input file
 {
   "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME/",
-  "multicsv_table_or_from_to_in_csv_flag": "True",
+  "multi_part_or_split_csv_flag": "True",
   "FROM_here_in_csv": 0,
   "TO_here_in_csv": 4
 }
@@ -114,7 +115,7 @@ Here is an example using all optional fields (to be explained below):
   "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
   "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/",
-  "multicsv_table_or_from_to_in_csv_flag": "True",
+  "multi_part_or_split_csv_flag": "True",
   "FROM_here_in_csv": 0,
   "TO_here_in_csv": 4
 }
@@ -157,7 +158,7 @@ e.g.
 {
   "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_FOLDER/OPTIONAL_SUB_FOLDER/",
-  "multicsv_table_or_from_to_in_csv_flag": "True",
+  "multi_part_or_split_csv_flag": "True",
   "FROM_here_in_csv": 3,
   "TO_here_in_csv": 7
 }
@@ -269,6 +270,18 @@ import datetime
 
 #     return output_list  
 
+# Helper Function
+def remove_split_from_name(name):
+    """
+    if last part of name is _split__###
+    return: name - "split"
+
+    Else, return: name
+    """
+    if name[-15:-7] == "_split__":
+        return name[:-15] + ".csv"
+    else:
+        return name
 
 
 # Helper Function
@@ -745,6 +758,7 @@ def make_unpaired_data_csv_file_list(input_list, target_directory):
 ###########################
 def lambda_handler(event, context):
 
+
     ###################################
     # Preemptive Clean Up Lambda /tmp/
     ###################################
@@ -757,6 +771,24 @@ def lambda_handler(event, context):
     ############
     # if not, give user a clear error
 
+    # get from_to_in_csv_flag 
+    # True or False
+    # Test for input:
+    # Note: convert from string to boolean type
+    try:
+        from_to_in_csv_flag = event["from_to_in_csv_flag"]
+
+        # String to boolean
+        if from_to_in_csv_flag == "True":
+            from_to_in_csv_flag = True
+        else:
+            from_to_in_csv_flag = False
+
+        # For terminal
+        print("FLAG! from_to_in_csv_flag: ", from_to_in_csv_flag)
+
+    except:
+        from_to_in_csv_flag = False
 
 
     # get FROM_here_in_csv 
@@ -767,7 +799,9 @@ def lambda_handler(event, context):
         to_flag = True
 
     except:
-        from_to_flag = False
+        from_to_in_csv_flag = False
+        from_flag = False
+        to_flag = False
 
     # get TO_here_in_csv 
     # True or False
@@ -777,31 +811,37 @@ def lambda_handler(event, context):
         from_flag = True
 
     except:
-        from_to_flag = False
-
+        from_to_in_csv_flag = False
+        from_flag = False
+        to_flag = False
     
     if from_flag is True & to_flag is True:
-        from_to_flag = True
+        from_to_in_csv_flag = True
 
 
-    # get multicsv_table_or_from_to_in_csv_flag 
+    # get multi_part_or_split_csv_flag 
     # True or False
     # Test for input:
     # Note: convert from string to boolean type
     try:
-        multicsv_table_or_from_to_in_csv_flag = event["multicsv_table_or_from_to_in_csv_flag"]
+        multi_part_or_split_csv_flag = event["multi_part_or_split_csv_flag"]
 
         # String to boolean
-        if multicsv_table_or_from_to_in_csv_flag == "True":
-            multicsv_table_or_from_to_in_csv_flag = True
+        if multi_part_or_split_csv_flag == "True":
+            multi_part_or_split_csv_flag = True
         else:
-            multicsv_table_or_from_to_in_csv_flag = False
+            multi_part_or_split_csv_flag = False
 
         # For terminal
-        print("FLAG! multicsv_table_or_from_to_in_csv_flag: ", multicsv_table_or_from_to_in_csv_flag)
+        print("FLAG! multi_part_or_split_csv_flag: ", multi_part_or_split_csv_flag)
+        print("flag type: ", type(multi_part_or_split_csv_flag))
 
     except:
-        multicsv_table_or_from_to_in_csv_flag = False
+        multi_part_or_split_csv_flag = False
+
+        # For terminal
+        print("FLAG! multi_part_or_split_csv_flag: ", multi_part_or_split_csv_flag)
+        print("flag type: ", type(multi_part_or_split_csv_flag))
 
 
     # get directory_name in s3
@@ -1031,14 +1071,42 @@ def lambda_handler(event, context):
         }
 
 
+    #########################################
+    # make cleaned_aws_names_for_tables_list
+    #########################################
+    
+    cleaned_aws_names_for_tables_list = []
+
+    # remove "split" from root name
+    for this_name in plain_names_list:
+        # use helper function to remove "split###" from the names of split files
+        cleaned_aws_names_for_tables_list.append( remove_split_from_name(this_name) )
+
+    # remove duplicates
+    cleaned_aws_names_for_tables_list = list( set( cleaned_aws_names_for_tables_list ) )
+
+    #################################################
+    # make a list of tables that may need to be made
+    #################################################
+
+    list_of_tables_that_need_to_be_made = []
+
+    for this_name in cleaned_aws_names_for_tables_list:
+        # use helper function to remove "split###" from the names of split files
+        list_of_tables_that_need_to_be_made.append( this_name[:-4] )
+
     # # inspection
     # print( "list_all", list_all )
     # print("list_of_subdirectories", list_of_subdirectories)
-    print( "rough_s3_file_names_list", rough_s3_file_names_list)
-    print( "unpaired_data_csv_file_list", unpaired_data_csv_file_list)
-    print( "data_csv_only_file_list", data_csv_only_file_list)
-    print( "plain_names_list", plain_names_list)
-    print( "files_that_need_metadata_files_list", files_that_need_metadata_files_list)
+    print( "LISTS! LOVE IT!" )
+    print( "rough_s3_file_names_list", rough_s3_file_names_list )
+    print( "unpaired_data_csv_file_list", unpaired_data_csv_file_list )
+    print( "data_csv_only_file_list", data_csv_only_file_list )
+    print( "plain_names_list", plain_names_list )
+    print( "files_that_need_metadata_files_list", files_that_need_metadata_files_list )
+    print( "cleaned_aws_names_for_tables_list", cleaned_aws_names_for_tables_list )
+    print( "list_of_tables_that_need_to_be_made", list_of_tables_that_need_to_be_made )
+
 
 
 
@@ -1049,10 +1117,10 @@ def lambda_handler(event, context):
 
     # Skip this step if the from_to is turned-on:
     # in cases where from_to is used, the table already exists
-    if multicsv_table_or_from_to_in_csv_flag is False:
+    if multi_part_or_split_csv_flag is False:
 
         # TODO: this should be all plain names...
-        for this_name in plain_names_list:
+        for this_name in cleaned_aws_names_for_tables_list:
 
             # remove the .csv
             this_name = this_name[:-4]
@@ -1082,29 +1150,30 @@ def lambda_handler(event, context):
     ###############
     # For: From To
     ###############
-    # if table does NOT exist, set a flag that the TABLE needs to be MADE:
 
-    if multicsv_table_or_from_to_in_csv_flag is True:
+    if multi_part_or_split_csv_flag is True:
 
-        # TODO: this should be all plain names...
-        for this_name in plain_names_list:
+        # iterate through the cleaned aws tables names list (not "split")
+        for this_name in cleaned_aws_names_for_tables_list:
 
             # remove the .csv
-            this_name = this_name[:-4]
+            this_name_no_csv_suffix = this_name[:-4]
 
             try:
-                response = dynamodb_client.describe_table(TableName=this_name)
+                response = dynamodb_client.describe_table(TableName=this_name_no_csv_suffix)
             
                 table_needs_to_be_made_flag = False
 
                 # for terminal
-                print(f"""OK! This table exists:"{this_name}" OK! """)
+                print(f"""multi-part mode: OK! This table exists:"{this_name_no_csv_suffix}" OK! """)
+
+                list_of_tables_that_need_to_be_made.remove(this_name_no_csv_suffix)
                 
             except:
                 table_needs_to_be_made_flag = True
 
                 # for terminal
-                print(f"""TODO: This table needs to be made:"{this_name}" """)
+                print(f"""multi-part mode TODO: This table needs to be made:"{this_name_no_csv_suffix}" """)
 
     else:
         table_needs_to_be_made_flag = True
@@ -1150,7 +1219,6 @@ def lambda_handler(event, context):
 
         # # inspection
         # print(f"files_that_need_metadata_files_list, expanded: name in s3: {s3_name_data}")
-
 
         try:
             # 2
@@ -1215,9 +1283,9 @@ def lambda_handler(event, context):
         # # inspection
         # print("s3_metadata_name: ", s3_metadata_name)
 
-        #############################
+        ##############################
         # Upload files into S3 bucket
-        #############################
+        ##############################
 
         try:
             # 4
@@ -1270,8 +1338,12 @@ def lambda_handler(event, context):
         # make bouquet of names   |/
         ########################  |
 
-        # short name, no padding
-        table_name = this_file[:-4]
+        # remove _split__###
+        cleaned_aws_name = remove_split_from_name( this_file )
+
+        # remove .csv
+        table_name = cleaned_aws_name[:-4]
+
         data_short_name = this_file
         meta_short_name = "metadata_" + this_file
 
@@ -1285,7 +1357,6 @@ def lambda_handler(event, context):
 
         # # inspection
         # print(f"files_that_need_metadata_files_list, expanded: name in s3: {s3_metadata_name}")
-
 
         #########################################################
         # Get and load to pandas Data and Metadate files from S3
@@ -1405,38 +1476,50 @@ def lambda_handler(event, context):
         # Make New Table in DynamoDB
         #############################
 
+
+        # insepction
+        print("inspection for section: # Make New Table in DynamoDB line 1464")
+        print("multi_part_or_split_csv_flag", type(multi_part_or_split_csv_flag), multi_part_or_split_csv_flag)
+        print("table_needs_to_be_made_flag", type(table_needs_to_be_made_flag), table_needs_to_be_made_flag)
+
+
         # Do NOT skip this step if: 
-        # multicsv_table_or_from_to_in_csv_flag is False) 
+        # multi_part_or_split_csv_flag is False) 
         # or (table_needs_to_be_made_flag is True
-        if (multicsv_table_or_from_to_in_csv_flag is False) or (table_needs_to_be_made_flag is True):
+        if (multi_part_or_split_csv_flag is False) or (table_needs_to_be_made_flag is True):
 
-            try:
+            if table_name in list_of_tables_that_need_to_be_made:
 
-                # get primary key data so that you can make the new table
-                primary_key_name, key_dtype = get_primary_key_dtype_data_to_make_table(meta_df)
+                try:
+                    # get primary key data so that you can make the new table
+                    primary_key_name, key_dtype = get_primary_key_dtype_data_to_make_table(meta_df)
 
-                # make new table in aws-dynamoDB
-                make_table_in_aws_dynamoDB(dynamodb_client, table_name, primary_key_name, key_dtype)
+                    # make new table in aws-dynamoDB
+                    make_table_in_aws_dynamoDB(dynamodb_client, table_name, primary_key_name, key_dtype)
 
+                    # if table made: remove name from the list of tables to make
+                    list_of_tables_that_need_to_be_made.remove(table_name)
 
-            except Exception as e:
-        
-                output = f"""Error: Could NOT make new table in dynamoDB:
-                table_name = {table_name}
-                primary_key_name = {primary_key_name} 
-                key_dtype = {key_dtype} 
-                Error Message = '{str(e)} 
-                """
-                # print for terminal
-                print(output)
+                except Exception as e:
+            
+                    output = f"""Error: Could NOT make new table in dynamoDB:
+                    this_file = {this_file}
+                    table_name = {table_name}
+                    primary_key_name = {primary_key_name} 
+                    key_dtype = {key_dtype} 
+                    Error Message = '{str(e)} 
+                    """
+                    # print for terminal
+                    print(output)
 
-                statusCode = 403
+                    statusCode = 403
 
-                # End the lambda function
-                return {
-                    'statusCode': statusCode,
-                    'body': output
-                }
+                    # End the lambda function
+                    return {
+                        'statusCode': statusCode,
+                        'body': output
+                    }
+
 
 
         #################################
@@ -1479,7 +1562,7 @@ def lambda_handler(event, context):
         # TO_here_in_csv
         # if no from-to-default
 
-        if (multicsv_table_or_from_to_in_csv_flag is True) and (from_to_flag is True) :
+        if from_to_in_csv_flag is True:
             pass
 
         else:
@@ -1538,7 +1621,7 @@ def lambda_handler(event, context):
         # if data transfer has completed, then move the files into a 'tranfered' directory
 
         # Skip if from_to is True
-        if multicsv_table_or_from_to_in_csv_flag is False:
+        if from_to_in_csv_flag is False:
 
             try:
                 # move data csv
@@ -1546,6 +1629,9 @@ def lambda_handler(event, context):
 
                 # move metadata_ file
                 move_file_in_S3(s3_resource, S3_BUCKET_NAME, target_directory, meta_short_name, default_folder_for_completed_csv_files)
+
+                # for terminal:
+                print(f"File Moved after Completed: {data_short_name},{meta_short_name}")
 
 
             except Exception as e:
