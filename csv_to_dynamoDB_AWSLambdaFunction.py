@@ -1,6 +1,5 @@
 """
 v11
-2021.12.04
 dynamic .csv to AWS dynamoDB - AWS-lambda-function
 
 lambda function will need these permissions:
@@ -163,6 +162,21 @@ e.g.
   "TO_here_in_csv": 7
 }
 ```
+
+12. Split Files: Sometimes csv files are very large and it is best to split them into pieces to deal with them. 
+This csv uploader tool is designed to work with this csv splitter:
+https://github.com/lineality/split_csv_python_script 
+
+As a rule of thumb
+if you csv file has more then 10,000 rows, 
+then split the file up, put all the split files into the target direction, 
+hit GO (proverbially) and the tool will put them all into the same table.
+
+To do this you must
+- set the multi_part_or_split_csv_flag flag to True in the intput
+- have each part suffixed with _split__###.csv (any method resulting in that will work. 
+
+If there are many parts and the tool times out, just keep running it until all the parts get completed and moved to the 'completed files" folder.
 
 
 # Workflow
