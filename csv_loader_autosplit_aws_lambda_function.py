@@ -412,8 +412,8 @@ def split_csv():
         # load csv into pandas
         df = pd.read_csv( your_file_name )
 
-        # # inspection
-        print("df shape in split_csv(): ", df.shape)
+        # # # inspection
+        # print("df shape in split_csv(): ", df.shape)
 
         # os.remove(your_file_name)
 
@@ -425,8 +425,8 @@ def split_csv():
 
         first_new_file_name, second_new_file_name = make_new_names( your_file_name )
 
-        # for terminal
-        print( "split_csv() new file names, ", first_new_file_name, second_new_file_name )
+        # # for terminal
+        # print( "split_csv() new file names, ", first_new_file_name, second_new_file_name )
 
         #############
         # First Half
@@ -440,7 +440,7 @@ def split_csv():
         # drop (not in place) rows from_here to_here
         df.drop(df.index[from_here:to_here], inplace=False).to_csv( first_new_file_name, index=False, header=True ) 
 
-        print("Made: ", first_new_file_name)
+        # print("Made: ", first_new_file_name)
 
         # increment file counter
         file_counter += 1
@@ -457,7 +457,7 @@ def split_csv():
         # drop (not in place) rows from_here to_here
         df.drop(df.index[from_here:to_here], inplace=False).to_csv( second_new_file_name, index=False, header=True ) 
         
-        print("Made: ", second_new_file_name)
+        # print("Made: ", second_new_file_name)
 
         # increment file counter
         file_counter += 1
@@ -755,8 +755,8 @@ def move_file_in_S3(s3_resource, S3_bucket_target, target_directory, target_file
 # helper function to ulpload a file to AWS S3
 def upload_file_to_S3(s3_resource, S3_bucket_target, python_tmp_file_location, new_S3_file_directory_and_name_key):
 
-    # for terminal
-    print("uploading file to S3: ", s3_resource, S3_bucket_target, python_tmp_file_location, new_S3_file_directory_and_name_key)
+    # # for terminal
+    # print("uploading file to S3: ", s3_resource, S3_bucket_target, python_tmp_file_location, new_S3_file_directory_and_name_key)
 
     s3_resource.Bucket(S3_bucket_target).upload_file(python_tmp_file_location, new_S3_file_directory_and_name_key)
 
@@ -817,8 +817,8 @@ def make_metadata_csv(name_of_csv):
     # load file into pandas dataframe
     df = pd.read_csv( name_of_csv )
 
-    # # inspection
-    print("df shape (make meta): ", df.shape)
+    # # # inspection
+    # print("df shape (make meta): ", df.shape)
 
     # extract list of column names from .csv
     column_name_list = list(df.columns)
@@ -1086,9 +1086,6 @@ def make_unpaired_data_csv_file_list(input_list, target_directory):
 # main AWS lambda function
 ###########################
 def lambda_handler(event, context):
-
-    # for terminal
-    print("Starting main function...")
 
     ###################################
     # Preemptive Clean Up Lambda /tmp/
@@ -1502,8 +1499,8 @@ def lambda_handler(event, context):
         # load into pandas
         df = pd.read_csv(lambda_tmp_name_data)
 
-        # # inspection
-        print("df shape (Auto-Split): ", df.shape)
+        # # # inspection
+        # print("df shape (Auto-Split): ", df.shape)
 
         # get number of rows
         df_shape = df.shape[0]
@@ -1512,7 +1509,7 @@ def lambda_handler(event, context):
         number_of_split_files_needed = (df_shape // set_split_threshold_default_is_10k_rows) + 1
 
         # for terminal:
-        print(f"number of splits is [{number_of_split_files_needed}] ffor file [{this_file}]")
+        print(f"number of splits is [{number_of_split_files_needed}] for file [{this_file}]")
 
         # if odd number, 
         # AND if the number is not 1 (meaning: no splits needed)
@@ -1657,12 +1654,12 @@ def lambda_handler(event, context):
         # print("list_of_subdirectories", list_of_subdirectories)
         print( "split -> LIST OF LISTS OF FILES: \n" )
         print( "split -> rough_s3_file_names_list", rough_s3_file_names_list )
-        print( "split -> unpaired_data_csv_file_list", unpaired_data_csv_file_list )
-        print( "split -> data_csv_only_file_list", data_csv_only_file_list )
-        print( "split -> plain_names_list", plain_names_list )
-        print( "split -> files_that_need_metadata_files_list", files_that_need_metadata_files_list )
-        print( "split -> cleaned_aws_names_for_tables_list", cleaned_aws_names_for_tables_list )
-        print( "split -> list_of_tables_that_need_to_be_made", list_of_tables_that_need_to_be_made )
+        # print( "split -> unpaired_data_csv_file_list", unpaired_data_csv_file_list )
+        # print( "split -> data_csv_only_file_list", data_csv_only_file_list )
+        # print( "split -> plain_names_list", plain_names_list )
+        # print( "split -> files_that_need_metadata_files_list", files_that_need_metadata_files_list )
+        # print( "split -> cleaned_aws_names_for_tables_list", cleaned_aws_names_for_tables_list )
+        # print( "split -> list_of_tables_that_need_to_be_made", list_of_tables_that_need_to_be_made )
 
 
     ########################################################################
@@ -2008,9 +2005,8 @@ def lambda_handler(event, context):
         # Run helper function to check for warning flags
         warning_flags_list = make_primary_key_warning_flag_list(data_df)
 
-        # for terminal or inspection
-        print( "missing_data_flag: ", warning_flags_list )
-
+        # # for terminal or inspection
+        # print( "missing_data_flag: ", warning_flags_list )
 
         if len(warning_flags_list) != 0:
 
@@ -2047,10 +2043,10 @@ def lambda_handler(event, context):
         #############################
 
 
-        # insepction
-        print("inspection for section: # Make New Table in DynamoDB:")
-        print("multi_part_or_split_csv_flag", type(multi_part_or_split_csv_flag), multi_part_or_split_csv_flag)
-        print("table_needs_to_be_made_flag", type(table_needs_to_be_made_flag), table_needs_to_be_made_flag)
+        # # insepction
+        # print("inspection for section: # Make New Table in DynamoDB:")
+        # print("multi_part_or_split_csv_flag", type(multi_part_or_split_csv_flag), multi_part_or_split_csv_flag)
+        # print("table_needs_to_be_made_flag", type(table_needs_to_be_made_flag), table_needs_to_be_made_flag)
 
 
         # Do NOT skip this step if: 
@@ -2059,6 +2055,9 @@ def lambda_handler(event, context):
         if (multi_part_or_split_csv_flag is False) or (table_needs_to_be_made_flag is True):
 
             if table_name in list_of_tables_that_need_to_be_made:
+
+                # for terminal
+                print("Making new table: ", table_name)
 
                 try:
                     # get primary key data so that you can make the new table
@@ -2091,6 +2090,10 @@ def lambda_handler(event, context):
                     }
 
 
+            else:
+                # # for terminal
+                # print(table_name, ": not on list of tables that need to be made")
+                pass
 
         #################################
         # check to see if table is ready
@@ -2115,11 +2118,14 @@ def lambda_handler(event, context):
             # recheck status
             response = str(dynamodb_client.describe_table(TableName=table_name))
 
-            # for terminal
-            print( "Still waiting, counter: ", counter )
+            # # for terminal
+            # print( "Still waiting, counter: ", counter )
 
             # increment counter
             counter += 1
+
+        # for terminal
+        print("Waited for ", counter - 1, " seconds.")
 
         ####################
         ####################
@@ -2201,7 +2207,7 @@ def lambda_handler(event, context):
                 move_file_in_S3(s3_resource, S3_BUCKET_NAME, target_directory, meta_short_name, default_folder_for_completed_csv_files)
 
                 # for terminal:
-                print(f"File Moved after Completed: {data_short_name},{meta_short_name}")
+                print(f"Completed files moved:{data_short_name},{meta_short_name}")
 
 
             except Exception as e:
@@ -2226,15 +2232,15 @@ def lambda_handler(event, context):
     # Clear AWS Lambda Function /tmp/ directory
     clear_tmp_directory()
 
-    # for terminal
-    print("Final /tmp/ clear")
+    # # for terminal
+    # print("Final /tmp/ clear")
 
 
     ###############
     # Final Output
     ###############
     status_code = 200
-    output = f"""OK! Processes complete for these files: {data_csv_only_file_list}
+    output = f"""OK! Processes complete for these files: {cleaned_aws_names_for_tables_list}
     See metadata_ files and original files in the new 'transfered_files' directory'
     Please check dynamoDB tables to see that datatypes and data transfer is satisfactory. 
     """
