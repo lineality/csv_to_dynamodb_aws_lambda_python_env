@@ -96,14 +96,14 @@ Instruction for using the .csv auto-load Tool:
 
 Please read and follow these instructions, and please tell me about any errors you recieve. 
 
-1. file input must be one or more .csv files (no other formats)
+1. input file(s) must be one or more .csv files (no other formats)
 
-2. file input must be in a directory in S3
+2. input file(s) must be in a directory in an AWS S3 folder(directory)
 
-3. the tool is an AWS lambda function which is or operates like an api-endpoint
+3. this tool is an AWS lambda function which is or operates like an api-endpoint
 
-4. directories & api-input: the json input for the lambda function(or endpoint)
-must look like this
+4. json-input: the json input for the lambda function(or endpoint)
+must look like this:
 ```
 {
   "S3_BUCKET_NAME": "YOUR_S3_BUCKET_NAME_HERE",
@@ -125,11 +125,12 @@ Here is an example using all optional fields (to be explained below):
   "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/",
   "multi_part_or_split_csv_flag": "True",
   "FROM_here_in_csv": 0,
-  "TO_here_in_csv": 4
+  "TO_here_in_csv": 4,
+  "set_split_threshold_default_is_10k_rows": 5000
 }
 ```
 
-5. The csv-tool make a data-table in an AWS-database from your .csv file. Make the name of your .csv file the same as what you want the AWS database table to be called. The name of each file must be:
+5. The csv-tool makes a data-table in an AWS-database from your .csv file. Make the name of your .csv file the same as what you want the AWS database table to be called. The name of each file must be:
 ```
 Between 3 and 255 characters, containing only letters, numbers, underscores (_), hyphens (-), and periods (.)
 ```
@@ -161,33 +162,38 @@ e.g.
 
 10. Please check the new data-tables in AWS to make sure they look as you want them to look. 
 
-11. The default mode is to put one data-csv file into one dynamoDB table, however you can select from-to for which rows you want to select to upload. This function also works to put two data-csv files into the SAME table BUT: be careful not to overwrite an existing table, and multiple component files (when putting multiple data-csv files into one dynamoDB table) must be given the same name and individually put into S3 and run separately. (Note: separate functionality could be made to combine many small files into one table but usually this is used when csv files are too BIG to load in all at one time. Not being able to load the table all at once -> you can now load the table in separate batches. You need to set a multfile flag and (optionally) select from and to with your inputs. Starting at 1 or 0 have the same effect, starting from the begining. 
+11. From To: The default mode is to put one data-csv file into one dynamoDB table, however you can select from-to for which rows you want to select to upload. This from-to will disable moving completed files. From-to cannot be used along with split-multi files. Starting at 1 or 0 have the same effect, starting from the begining. 
 ```
 {
   "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_FOLDER/OPTIONAL_SUB_FOLDER/",
-  "multi_part_or_split_csv_flag": "True",
   "FROM_here_in_csv": 3,
   "TO_here_in_csv": 7
 }
 ```
 
-12. Split Files: Sometimes csv files are very large and it is best to split them into pieces to deal with them. 
-This csv uploader tool is designed to work with this csv splitter:
+12. Split Files & auto-split: As with meta-data, file splitting can be automatic or manual. The automatic splitting does not require any addition steps, beyond re-running the function if it times out to keep going through the files. 
+
+Sometimes csv files are very large and it is best to split them into pieces before uploading them (so that the tool does not time-out in the middle of a file). 
+This csv uploader tool is designed to work with (and includes a version of)  this csv splitter:
 https://github.com/lineality/split_csv_python_script 
 
 As a rule of thumb
-if you csv file has more then 10,000 rows, 
-then split the file up, put all the split files into the target direction, 
-hit GO (proverbially) and the tool will put them all into the same table.
-
-To do this you must
-- set the multi_part_or_split_csv_flag flag to True in the intput
-- have each part suffixed with _split__###.csv (any method resulting in that will work. 
+files with more than 10,000 row should be split. The auto-splitter will do this automatically, though you custom set threshold, which is default set to 10,000 rows. this json choice is called "set_split_threshold_default_is_10k_rows"
 
 If there are many parts and the tool times out, just keep running it until all the parts get completed and moved to the 'completed files" folder.
 
-13. Auto-split of large files does not require any user action.
+You can manually split the file yourself and put all the split files into the target direction, 
+hit GO (proverbially) and the tool will put them all into the same table.
+Each part must be suffixed with _split__###.csv 
+
+ This function also works to put two data-csv files into the SAME table BUT: be careful not to overwrite an existing table, and multiple component files (when putting multiple data-csv files into one dynamoDB table) must be given the same name and individually put into S3 and run separately.
+
+Note: be careful about mixing split and many other non-split files together, as processing split-files will turn off the protection against over-writing an existing table. 
+
+13. You will get an error if you try to use split-file and from-to at the same time.
+
+
 
 
 # Workflow
@@ -505,7 +511,7 @@ def main_split_csv_iterator(number_of_split_files_needed):
         split_csv()
 
     # print end
-    return None
+    return print( "files split by main_split_csv_iterator()" )
 
 
 
@@ -800,7 +806,7 @@ def print_aws_tmp_files():
     # use glob to get a list of remaining .csv files
     aws_tmp_files_list = glob.glob("/tmp/*")
       
-    return print("/tmp/ files_list = ", aws_tmp_files_list )
+    return print( "/tmp/ files_list = ", aws_tmp_files_list )
 
 # helper function 
 def make_metadata_csv(name_of_csv):
@@ -1093,6 +1099,8 @@ def lambda_handler(event, context):
     # Clear AWS Lambda Function /tmp/ directory
     clear_tmp_directory()
 
+    files_were_split_flag = False
+
     ############
     # Get Input 
     ############
@@ -1123,7 +1131,7 @@ def lambda_handler(event, context):
     # Test for input:
     try:
         FROM_here_in_csv = int( event["FROM_here_in_csv"] )
-        to_flag = True
+        from_flag = True
 
     except:
         from_to_in_csv_flag = False
@@ -1135,15 +1143,21 @@ def lambda_handler(event, context):
     # Test for input:
     try:
         TO_here_in_csv = int( event["TO_here_in_csv"] )
-        from_flag = True
+        to_flag = True
 
     except:
         from_to_in_csv_flag = False
         from_flag = False
         to_flag = False
     
-    if from_flag is True & to_flag is True:
+    # ensure both from and to are in place
+    if (from_flag is True) and (to_flag is True):
         from_to_in_csv_flag = True
+
+    else:
+        from_to_in_csv_flag = False
+        from_flag = False
+        to_flag = False 
 
 
     # get multi_part_or_split_csv_flag 
@@ -1459,6 +1473,42 @@ def lambda_handler(event, context):
         }
 
 
+    ##################################
+    # look for split files and re-set 
+    ##################################
+
+    for inspect_this in rough_s3_file_names_list:
+        if inspect_this[-15:-7] == "_split__":
+            multi_part_or_split_csv_flag = True
+            # for terminal
+            print("split file found, multi_part_or_split_csv_flag = True")
+            break
+
+
+    ##########################
+    # Check Flags & Conflicts
+    ##########################
+
+    # for terminal
+    print( f'split flag is: {multi_part_or_split_csv_flag}, from-to flag is {from_to_in_csv_flag}')
+
+    if (multi_part_or_split_csv_flag is True) and (from_to_in_csv_flag is True):
+
+        output = "Error: you cannot use split AND from-to at the same time."
+        
+        # print for terminal
+        print(output)
+
+        statusCode = 403
+
+        # End the lambda function
+        return {
+            'statusCode': statusCode,
+            'body': output
+        }
+
+
+
     # TODO UNDER CONSTRUCTION
     ##############################################################
     # Auto-Split: check each file to see if it needs to be split.
@@ -1546,18 +1596,18 @@ def lambda_handler(event, context):
             s3_name_data = target_directory + this_file
             s3_resource.Object(S3_BUCKET_NAME, s3_name_data).delete()
 
-            # for terminal
-            rough_s3_file_names_list2 = make_rough_S3_file_names_list( s3_bucket, target_directory )
-            print("list of S3 files after split: ", rough_s3_file_names_list2)
+            # # for terminal
+            # rough_s3_file_names_list2 = make_rough_S3_file_names_list( s3_bucket, target_directory )
+            # print("list of S3 files after split: ", rough_s3_file_names_list2)
 
             # clear /tmp/
             clear_tmp_directory()
 
-            files_split_flag = True
+            files_were_split_flag = True
 
 
     # after splitting all files: re-run making file name lists
-    if files_split_flag is True:
+    if files_were_split_flag is True:
 
         # change multi-part flag
         multi_part_or_split_csv_flag = True
@@ -2125,7 +2175,8 @@ def lambda_handler(event, context):
             counter += 1
 
         # for terminal
-        print("Waited for ", counter - 1, " seconds.")
+        if counter > 1:
+            print("Waited for ", counter - 1, " seconds.")
 
         ####################
         ####################
