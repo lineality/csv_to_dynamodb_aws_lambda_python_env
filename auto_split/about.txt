@@ -1,1 +1,0 @@
-The auto_split version automatically breaks up files too big to load in one runtime. See docs for more.
