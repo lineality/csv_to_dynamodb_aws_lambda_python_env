@@ -1,1 +1,6 @@
 This automatic-file-splitting version automatically breaks up files too big to load in one runtime. See docs for more.
+
+THe zip file is broken up to fit into github.
+
+See instructions to recombine zip file here:
+https://github.com/lineality/linux_make_split_zip_archive_multiple_small_parts_for_AWS
