@@ -30,11 +30,10 @@ Edge cases and exceptional cases aside, a tool for loading .csv files into Dynam
 
 #### Tools for a simple inspection of the above properties are included in this github repo. These datatype-tester tools can be used in google colab, a local python notebook, or a local .py file (e.g. for files too large for colab). 
 
-And there's an online colab here:
+And there's a datatype-tester online colab here (and this notebook is in this repo for you to run locally or upload to google colab, aws-sagemaker, etc.):
 https://colab.research.google.com/drive/18UwXMKqD-DLBs29RZYHa9RqrVdYa8rvK#scrollTo=_1r1SEvqCfdC
 
 #### Once this is done, then any number of these checked and clean files should be able to be automatically processed to have the data loaded into database tables in AWS.
-
 
 # Deploying the python ENV into AWS:
 
