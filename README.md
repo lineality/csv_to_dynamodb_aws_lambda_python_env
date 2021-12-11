@@ -1,6 +1,19 @@
-# env_aws_lambda_auto_load_csv_to_dynamodb
+### env_aws_lambda_auto_load_csv_to_dynamodb
 
-#### This is an AWS Lambda Function (more specifically, a zipped uploadable python environment file for an AWS Lambda Function) that will automatically load a cleaned .csv file into a table (which the tool creates) in AWS dynamoDB (a NoSQL database).
+# Easy .CSV to DynamoDB
+
+This is a solution to easily automatically load .csv (etc) files into dynamoDB data tables (in AWS).
+
+Edge cases and exceptional cases aside, a tool for loading .csv files into DynamoDB should be as simple as "load files" -> "push go" -> "done!" and include the following features:
+1. It works on a whole folder/directory of files (not just one file at a time).
+2. It allows the user to select from_this_row and to_this_row in case only part of a file is to be uploaded (optionally, if desired).
+3. It allows for the user to manually specify column data types and column names IF needed, but does not require this by default. 
+4. It allows for very large file sizes automatically (with no user action needed). 
+5. It should allow for missing data in the .csv files. 
+6. It should allow split-csv files to be automatically merged into the same data table.
+7. It should be an all-inside-AWS solution, not requiring anyone to have special hardware or software. 
+
+#### This is an AWS Lambda Function (more specifically, a zipped uploadable python environment file for an AWS Lambda Function) that will automatically load a cleaned .csv file into a table (which the tool auto-creates) in AWS dynamoDB (a NoSQL database). Join the split zip files (instructions here). Create an AWS Lambda Function, upload the python env. Upload your .csv files to AWS-S3, hit 'Go' (activate the lambda function). That's all. 
 
 ## Overview and Introduction
 #### The process of transferring data from a .csv file (for example) into a data table in dynamoDB (an AWS database) is not simple. Going the other way, making a .csv from a table is very simple, just one "make a .csv" button to push. Both should be easy.
@@ -91,14 +104,14 @@ Instruction for using the .csv auto-load Tool:
 
 Please read and follow these instructions, and please tell me about any errors you recieve. 
 
-1. file input must be one or more .csv files (no other formats)
+1. input file(s) must be one or more .csv files (no other formats)
 
-2. file input must be in a directory in S3
+2. input file(s) must be in a directory in an AWS S3 folder(directory)
 
-3. the tool is an AWS lambda function which is or operates like an api-endpoint
+3. this tool is an AWS lambda function which is or operates like an api-endpoint
 
-4. directories & api-input: the json input for the lambda function(or endpoint)
-must look like this
+4. json-input: the json input for the lambda function(or endpoint)
+must look like this:
 ```
 {
   "S3_BUCKET_NAME": "YOUR_S3_BUCKET_NAME_HERE",
@@ -120,11 +133,12 @@ Here is an example using all optional fields (to be explained below):
   "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/",
   "multi_part_or_split_csv_flag": "True",
   "FROM_here_in_csv": 0,
-  "TO_here_in_csv": 4
+  "TO_here_in_csv": 4,
+  "set_split_threshold_default_is_10k_rows": 5000
 }
 ```
 
-5. The csv-tool make a data-table in an AWS-database from your .csv file. Make the name of your .csv file the same as what you want the AWS database table to be called. The name of each file must be:
+5. The csv-tool makes a data-table in an AWS-database from your .csv file. Make the name of your .csv file the same as what you want the AWS database table to be called. The name of each file must be:
 ```
 Between 3 and 255 characters, containing only letters, numbers, underscores (_), hyphens (-), and periods (.)
 ```
@@ -156,42 +170,51 @@ e.g.
 
 10. Please check the new data-tables in AWS to make sure they look as you want them to look. 
 
-11. The default mode is to put one data-csv file into one dynamoDB table, however you can select from-to for which rows you want to select to upload. This function also works to put two data-csv files into the SAME table BUT: be careful not to overwrite an existing table, and multiple component files (when putting multiple data-csv files into one dynamoDB table) must be given the same name and individually put into S3 and run separately. (Note: separate functionality could be made to combine many small files into one table but usually this is used when csv files are too BIG to load in all at one time. Not being able to load the table all at once -> you can now load the table in separate batches. You need to set a multfile flag and (optionally) select from and to with your inputs. Starting at 1 or 0 have the same effect, starting from the begining. 
+11. From To: The default mode is to put one data-csv file into one dynamoDB table, however you can select from-to for which rows you want to select to upload. This from-to will disable moving completed files. From-to cannot be used along with split-multi files. Starting at 1 or 0 have the same effect, starting from the begining. 
 ```
 {
   "S3_BUCKET_NAME": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_FOLDER/OPTIONAL_SUB_FOLDER/",
-  "multi_part_or_split_csv_flag": "True",
   "FROM_here_in_csv": 3,
   "TO_here_in_csv": 7
 }
 ```
 
-12. Split Files: Sometimes csv files are very large and it is best to split them into pieces to deal with them. 
-This csv uploader tool is designed to work with this csv splitter:
+12. Split Files & auto-split: As with meta-data, file splitting can be automatic or manual. The automatic splitting does not require any addition steps, beyond re-running the function if it times out to keep going through the files. 
+
+Sometimes csv files are very large and it is best to split them into pieces before uploading them (so that the tool does not time-out in the middle of a file). 
+This csv uploader tool is designed to work with (and includes a version of)  this csv splitter:
 https://github.com/lineality/split_csv_python_script 
 
 As a rule of thumb
-if you csv file has more then 10,000 rows, 
-then split the file up, put all the split files into the target direction, 
-hit GO (proverbially) and the tool will put them all into the same table.
-
-To do this you must
-- set the multi_part_or_split_csv_flag flag to True in the intput
-- have each part suffixed with _split__###.csv (any method resulting in that will work. 
+files with more than 10,000 row should be split. The auto-splitter will do this automatically, though you custom set threshold, which is default set to 10,000 rows. this json choice is called "set_split_threshold_default_is_10k_rows"
 
 If there are many parts and the tool times out, just keep running it until all the parts get completed and moved to the 'completed files" folder.
 
+You can manually split the file yourself and put all the split files into the target direction, 
+hit GO (proverbially) and the tool will put them all into the same table.
+Each part must be suffixed with _split__###.csv 
 
-# Workflow
-1. preemptively clear the /tmp/ directory in lambda-function 
+ This function also works to put two data-csv files into the SAME table BUT: be careful not to overwrite an existing table, and multiple component files (when putting multiple data-csv files into one dynamoDB table) must be given the same name and individually put into S3 and run separately.
+
+Note: be careful about mixing split and many other non-split files together, as processing split-files will turn off the protection against overwriting an existing table. 
+
+13. You will get an error if you try to use split-file and from-to at the same time.
+
+
+
+# Workflow (How the Tool Works under the hood)
+1. pre-emptively clear the /tmp/ directory in lambda-function 
 2. user inputs a folder (a target s3 directory, in which are .csv files) 
 3. scan S3 folder for .csv files 
 4. make a list of .csv files NOT including "metadata_" at the start. We will later iterate through this file 3 times. 
-5. track forms of names keeping track of the root name, the lambda name, the olds3 name and the news3 name is task, etc.
-6. make a list of files that need meta-data files  
+5. track the many forms of names keeping track of the root name, the lambda name, the old s3 name and the new s3 name, split names, table names, etc.
+6. make a list of files that need meta-data files (there are several such related lists, and these are re-created after files are auto split if that happens)  
 7. iteration 1: iterate through list of data-csv files and check to see if there are any name collisions between file names and dynamoDB tables to be created (exit to error message if collision found) Note: extra logic for where from-to or multiple input files are used.
-8. iteration 2: iterate through files_that_need_metadata_files_list of data-csv files to make a list of unpaired files: use pandas to create a table with AWS datatypes, and move that metadata_file to s3. The goals here is to allow users to upload custom metadata files, but to default to automating that process.  
+8. iteration 2 and auto-split: iterate through files_that_need_metadata_files_list of data-csv files to make a list of unpaired files: use pandas to create a table with AWS datatypes, and move that metadata_file to s3. The goals here is to allow users to upload custom metadata files, but to default to automating that process.  
+Plus auto-split
+check each data csv file's shape to see if the file has more than 10,000 rows. If so: split/replace the file in S3.
+
 9. iteration 3: when all data-csv files are paired with a metadata_ file:  iterate through the list of all root files (see below)
 
 #### The next steps are done for each (iterating through each) data file in the 3rd and last pass through the list of data-csv files:
@@ -206,8 +229,6 @@ If there are many parts and the tool times out, just keep running it until all t
 #### These steps are done at the very end of the whole process after all files are processed (if there is no error that stops the process)
 15. remove all files from lambda /tmp/ directory
 16. output: list of tables created OR error message
-
-
 
 
 
