@@ -1,4 +1,4 @@
-### env_aws_lambda_auto_load_csv_to_dynamodb
+### csv_to_dynamodb_aws_lambda_python_env
 
 # Easy .CSV to DynamoDB
 
