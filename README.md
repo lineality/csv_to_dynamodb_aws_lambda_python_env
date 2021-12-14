@@ -37,15 +37,22 @@ https://colab.research.google.com/drive/18UwXMKqD-DLBs29RZYHa9RqrVdYa8rvK#scroll
 # Deploying the python ENV into AWS:
 
 Making an AWS lambda function is not too difficult but there should be instructions for that...(pending). 
-## Roughly:
-1. go to aws
-2. go to lambda functions
-3. create a function
-4. select that it be a python 3.8 function
-5. add some permissions (see details below)
-6. create the function
-7. upload a zip file containing your function (provides as files in this repo, see below)
-8. you can run it like that, or make an api-gateway endpoint (and a colab to use that endpoint...optionally)
+## Brief Instructions
+1. Go to aws https://console.aws.amazon.com/
+2. Go to lambda functions https://console.aws.amazon.com/lambda/ 
+3. Create a function (Press big orange "Create Function" Button)
+4. Select: Author from scratch
+5. Select: Runtime -> python 3.8 function
+6. Add permissions:
+- AmazonDynamoDBFullAccess 
+- AWSLambdaDynamoDBExecutionRole 
+- AWSLambdaInvocation-DynamoDB
+- AWSLambdaBasicExecutionRole
+- AmazonS3FullAccess 
+- AmazonS3ObjectLambdaExecutionRolePolicy 
+7. Create the function
+8. Upload a zip file containing your function (provides as files in this repo, see below)
+9. You can run it like that, or make an api-gateway endpoint (and a colab to use that endpoint...optionally)
 
 You will also need to know how to load files into S3 (file storage in AWS).
 
