@@ -15,7 +15,8 @@ Overall, a tool for loading .csv files into DynamoDB should be as simple as "loa
 8. It actively scans for problems with the files and if found reports those to the user. 
 9. It will automatically create the data table, the fields, and the data-types, including the primary-key field. 
 
-#### Instructions in brief: Recombine the zipped uploadable python environment and upload it into an AWS Lambda Function. Upload your .csv files to AWS-S3. Hit 'Go' (activate the lambda function). That's all. 
+### Brief instructions for deployment and use: 
+#### Recombine the zipped uploadable python environment and upload it into an AWS Lambda Function. Upload your .csv files to AWS-S3 (AWS file storage). Point the tool to the file folder in S3. Hit 'Go' (activate the lambda function). That's all. 
 
 ## Overview and Introduction
 #### The process of transferring data from a .csv file (for example) into a data table in dynamoDB (an AWS database) is not simple. Going the other way, making a .csv from a table is very simple, just one "make a .csv" button to push. Both should be easy.
@@ -181,6 +182,7 @@ e.g.
 
 Sometimes csv files are very large and it is best to split them into pieces before uploading them (so that the tool does not time-out in the middle of a file). 
 This csv uploader tool is designed to work with (and includes a version of)  this csv splitter:
+
 https://github.com/lineality/split_csv_python_script 
 
 As a rule of thumb
@@ -229,4 +231,14 @@ check each data csv file's shape to see if the file has more than 10,000 rows. I
 
 
 
+# More Notes:
+DynamoDB does include more data-types which can at least be manually set in a metadata file, and perhaps added into the automated detector. 
+e.g.
+```
+String (text) = S
+Number (short, long, int, float etc) = N
+Boolean = BOOL
+Map (dictionary/json) = M
+List (array) = L
 
+```
