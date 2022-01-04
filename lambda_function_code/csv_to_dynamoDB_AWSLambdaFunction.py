@@ -1,5 +1,5 @@
 """
-v158 2022.01.04
+v161 2022.01.04
 automatic .csv to AWS-dynamoDB -- a python AWS-lambda-function
 
 this lambda function will need these permissions:
@@ -90,8 +90,34 @@ item_number, N
 
 
 
-"""
-# Rules / Instructions
+"""# Rules / Instructions
+
+## Cheat Sheet Instruction Summary
+1. If you have not yet examined your files (file's metadata) yet,
+you can use the tool to make your metadata files (so you can then look at them), by setting the "just_make_metadata_files_flag" to "True":
+```
+{
+  "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
+  "target_directory": "YOUR_FOLDER_NAME_HERE/",
+  "just_make_metadata_files_flag": "True"
+}
+```
+
+2. Put .csv files in the S3(AWS) folder.
+
+3. Point the lambda function at the correct S3 bucket and your folder:
+```
+{
+  "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
+  "target_directory": "YOUR_FOLDER_NAME_HERE/"
+}
+```
+4. Run the lamabda Function (Hit the "Go" button.)
+
+
+
+## Full Instructions
+
 Instruction for using the .csv auto-load Tool:
 
 Please read and follow these instructions, 
@@ -109,15 +135,15 @@ Do NOT put files into the tool that you do NOT want the file to process.
 must look like this:
 ```
 {
-  "s3_bucket_name": "YOUR_s3_bucket_name_HERE",
+  "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
   "target_directory": "YOUR_FOLDER_NAME_HERE/"
 }
 ```
-You can also make or use more sub-folders (directories) to organize your files. 
+You can also make or use more sub-folders (directories) to organize your files.
 In this case combine all folders (the path) to the target directory
 ```
 {
-  "s3_bucket_name": "YOUR_s3_bucket_name_HERE",
+  "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
   "target_directory": "YOUR_FOLDER_NAME_HERE/YOUR_SUB_FOLDER_NAME_HERE/"
 }
 ```
@@ -130,7 +156,8 @@ Here is an example using all optional fields (to be explained below):
   "multi_part_or_split_csv_flag": "True",
   "FROM_here_in_csv": 0,
   "TO_here_in_csv": 4,
-  "set_split_threshold_default_is_10k_rows": 5000
+  "set_split_threshold_default_is_10k_rows": 5000,
+  "just_make_metadata_files_flag": False
 }
 ```
 
@@ -143,16 +170,23 @@ Between 3 and 255 characters, containing only letters, numbers, underscores (_),
 This is because the database table is given the same name as the .csv file.
 Every table must have a unique name (so each .csv file must have a unique name). 
 
-6. The table must have a unique primary key. And the first column must be that unique key. A unique row-ID number will work if there is no meaningful unique row key. (So you may need to add that (ask if you need help).
+6. The table must have a unique primary key. And the first column must be 
+that unique key. A unique row-ID number will work if there is 
+no meaningful unique row key. 
+(So you may need to add that (ask if you need help).
 
 7. The tool will scan for 3 types of primary key errors and give you a warning to fix the file: missing data, 
 duplicate rows, and 
 mixed text/number data (e.g. text in a number column). 
 Finding a warning here halts the whole process, so not all files will have been checked. 
 
-8. Completed files (fully check and moved into a table) will be moved into a new directory called (by default) "default_folder_for_completed_csv_files/", but you can pick a new destination in your endpoint-json if you want: 
+8. Completed files (fully check and moved into a table) will be moved into 
+a new directory called (by default) "default_folder_for_completed_csv_files/",
+but you can pick a new destination in your endpoint-json if you want: 
 e.g.
+```
 "default_folder_for_completed_csv_files" : "THIS_FOLDER/"
+```
 Files not yet moved into AWS will remain in the original directory. 
 Please do NOT change the the destination folder to be INSIDE of your sub-folder.
 e.g.
@@ -164,11 +198,20 @@ e.g.
 }
 ```
 
-9. Please read the output of the function clearly (to see if there was an error or if the process completed). Some errors will regard your files and you can fix them. Other errors may indicate updates needed for the tool. Please report all errors we can understand this process well. 
+9. Please read the output of the function clearly 
+(to see if there was an error or if the process completed). 
+Some errors will regard your files and you can fix them. 
+Other errors may indicate updates needed for the tool. 
+Please report all errors we can understand this process well. 
 
 10. Please check the new data-tables in AWS to make sure they look as you want them to look. 
 
-11. From To: The default mode is to put one data-csv file into one dynamoDB table, however you can select from-to for which rows you want to select to upload. This from-to will disable moving completed files. From-to cannot be used along with split-multi files. Starting at 1 or 0 have the same effect, starting from the begining. 
+11. From To: 
+The default mode is to put one data-csv file into one dynamoDB table, 
+however you can select from-to for which rows you want to select to upload.
+This from-to will disable moving completed files. 
+From-to cannot be used along with split-multi files. 
+Starting at 1 or 0 have the same effect, starting from the begining. 
 ```
 {
   "s3_bucket_name": "YOUR_BUCKET_NAME",
@@ -198,6 +241,16 @@ Each part must be suffixed with _split__###.csv
 Note: be careful about mixing split and many other non-split files together, as processing split-files will turn off the protection against over-writing an existing table. 
 
 13. You will get an error if you try to use split-file and from-to at the same time.
+
+14. just_make_metadata_files_flag:
+If you want to use the tool to make your file inspection meta_data files and stop there (so you can examine those meta_data files before proceeding), then turn on (set to True) the just_make_metadata_files_flag == True
+```
+{
+  "s3_bucket_name": "YOUR_BUCKET_NAME",
+  "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
+  "just_make_metadata_files_flag": "False"
+}
+```
 
 
 
@@ -905,11 +958,52 @@ def make_metadata_csv(name_of_csv):
     for index, column_name in enumerate(pandas_dtypes_list):
         AWS_dtypes_list[index] = conversion_dict[column_name]
 
+    ################
+    # warning check
+    ################
+
+    # make empty lists for warnings, the same size as the name-list
+    mixed_datatype_flag_list = [False]*len(column_name_list)
+    missing_data_flag_list = [False]*len(column_name_list)
+    duplicate_data_flag_list = [False]*len(column_name_list)
+
+    ############################
+    # check mixed_datatype_flag
+    ############################
+    for index, column_name in enumerate(column_name_list):
+        if str(df[column_name].dtypes) == 'object':
+            mixed_datatype_flag_list[index] = True
+
+    ############################
+    # check missing_data_flag
+    ############################
+    # check is na
+    for index, column_name in enumerate(column_name_list):
+        if df[column_name].isna().sum() != 0:
+            missing_data_flag_list[index] = True
+
+    
+    # check is null
+    for index, column_name in enumerate(column_name_list):
+        if df[column_name].isnull().sum() != 0:
+            missing_data_flag_list[index] = True
+
+    ############################
+    # check duplicate_data_flag
+    ############################
+    for index, column_name in enumerate(column_name_list):
+        if ( df[column_name].value_counts().sum() == len(df[column_name].value_counts()) ) == False:
+            duplicate_data_flag_list[index] = True
+
+
     # make a dictionary of lists 
     type_dict = {'column_name': column_name_list, 
                  'AWS_column_dtype': AWS_dtypes_list, 
                  'pandas_column_dtype': pandas_dtypes_list,
                  'example_item_list': example_item_list,
+                 'mixed_datatype_flag_list': mixed_datatype_flag_list,
+                 'missing_data_flag_list': missing_data_flag_list,
+                 'duplicate_data_flag_list': duplicate_data_flag_list,
                  } 
         
     # make a new pandas dataframe based on the dictionary of lists    
@@ -1331,6 +1425,29 @@ def lambda_handler(event, context):
 
 
 
+    # Just Make Meta_data files
+    try:
+        just_make_metadata_files_flag = event["just_make_metadata_files_flag"]
+
+        # String to boolean
+        if just_make_metadata_files_flag == "True":
+            just_make_metadata_files_flag = True
+        else:
+            just_make_metadata_files_flag = False
+
+        # For terminal
+        print("flag check: set by parameter just_make_metadata_files_flag: ", just_make_metadata_files_flag)
+        #print("flag type: ", type(just_make_metadata_files_flag))
+
+    except:
+        just_make_metadata_files_flag = False
+
+        # For terminal
+        print("flag check: default value just_make_metadata_files_flag: ", just_make_metadata_files_flag)
+        #print("flag type: ", type(multi_part_or_split_csv_flag))
+
+
+
     ######################
     # Connect to DynamoDB
     ######################
@@ -1582,303 +1699,305 @@ def lambda_handler(event, context):
     see if you can re-start function from within...
     """
 
-    # iterate through files and check if they need splitting
-    for this_file in plain_names_list:
+    if just_make_metadata_files_flag == False:
 
-        files_were_split_flag = False
+        # iterate through files and check if they need splitting
+        for this_file in plain_names_list:
 
-        #                       * * *
-        ######################## \|/
-        # make bouquet of names   |/
-        ########################  |
-        # name of file in AWS-lambda /tmp/
-        s3_name_data = target_directory + this_file
-        # name of file in AWS-lambda /tmp/
-        lambda_tmp_name_data = '/tmp/' + this_file
+            files_were_split_flag = False
 
-
-        # pull file into lambda /tmp/
-        get_csv_from_S3_to_lambda_tmp(s3_client, s3_bucket_name, s3_name_data, lambda_tmp_name_data)
-
-        # # load into pandas
-        # df = pd.read_csv(lambda_tmp_name_data)
-
-
-        # load .csv into pandas df
-        # try alt encoding if default does not work
-        try:
-            df = pd.read_csv( lambda_tmp_name_data )
-        except:
-            df = pd.read_csv( lambda_tmp_name_data , encoding = "ISO-8859-1" )
-
-
-        ########################################
-        # Primary Key Acceptability Check et al
-        ########################################
-        """
-        DynamoDB needs a unique primary key column
-        Make sure the first column is acceptable as a primary key:
-        Report an error flag for each issue you test for:
-
-        - flag report for first column:
-          - type == object
-          - nuls > 0
-          - isna > 0
-          - duplicates > 0
-        if flag number > 0 halt and report flags
-        if no flags: "ok, process, no warning flags on primary key column"
-        """
-        
-        # Run helper function to check for warning flags
-        warning_flags_list = make_primary_key_warning_flag_list(df)
-
-        # # for terminal or inspection
-        # print( "missing_data_flag: ", warning_flags_list )
-
-        if len(warning_flags_list) != 0:
-
-            output = f"""Error primay key warning for {this_file} with {warning_flags_list}: 
-            The first collumn of {this_file} cannot be a primary key.
-            Safety-checks returned the following warning flags:
-            {warning_flags_list}
-            """
-            # print for terminal
-            print(output)
-
-            statusCode = 430
-
-            # End the lambda function
-            return {
-                'statusCode': statusCode,
-                'body': output
-            }
-        
-        else:
-            # for terminal
-            print(f"""Check ok! file: {this_file} with warning list: {warning_flags_list} """)
-
-
-        #######################################
-        # Compare to size threshold and split!
-        #######################################
-
-        # find number of times df needs to be split to be under threshold
-        number_of_splits = check_threshold_OK_is_True_or_get_split_number( df, set_split_threshold_default_is_10k_rows )
-
-        # for terminal:
-        print(f"number of splits is [{number_of_splits}] for file [{this_file}] ('True' here means zero splits)")
-
-        if number_of_splits != True:
-
-            # for terminal:
-            print("Running file splitter, file size over threshold...")
-
-            # Run AWS version of Split Function
-            main_split_csv_iterator(number_of_splits)
-
-            # # for terminal:
-            # print("ALL tmp files after running splitter")
-            # print( print_aws_tmp_files() )
-            # print("CSV tmp files after running splitter")
-            # print( glob.glob("/tmp/*.csv") )
-            
-            # upload split files to s3 target_directory
-            list_of_tmp_files = glob.glob("/tmp/*.csv")
-            for this_tmp_file in list_of_tmp_files:
-
-                # name of file in AWS-lambda /tmp/
-                s3_name_data = target_directory + this_tmp_file[5:]
-
-                upload_file_to_S3(s3_resource, s3_bucket_name, this_tmp_file, s3_name_data)
-
-            # delete original file from S3
+            #                       * * *
+            ######################## \|/
+            # make bouquet of names   |/
+            ########################  |
             # name of file in AWS-lambda /tmp/
             s3_name_data = target_directory + this_file
-            s3_resource.Object(s3_bucket_name, s3_name_data).delete()
-
-            # # for terminal
-            # rough_s3_file_names_list2 = make_rough_S3_file_names_list( s3_bucket, target_directory )
-            # print("list of S3 files after split: ", rough_s3_file_names_list2)
-
-            # clear /tmp/
-            clear_tmp_directory()
-
-            files_were_split_flag = True
+            # name of file in AWS-lambda /tmp/
+            lambda_tmp_name_data = '/tmp/' + this_file
 
 
-    # after splitting all files: re-run making file name lists
-    if files_were_split_flag is True:
+            # pull file into lambda /tmp/
+            get_csv_from_S3_to_lambda_tmp(s3_client, s3_bucket_name, s3_name_data, lambda_tmp_name_data)
 
-        # change multi-part flag
-        multi_part_or_split_csv_flag = True
-
-        # redo with new files
-        ##########################################################
-        # redo S3: Make Lists of .CSV and Metadata_ files from S3
-        ##########################################################
-        # uses helper functions
-
-        try:
-            #############################################################
-            # Get all file names from s3 directory (and sub-directories)
-            #############################################################
-
-            rough_s3_file_names_list = make_rough_S3_file_names_list( s3_bucket, target_directory )
-
-            #################################
-            # Make a data_csv_only_file_list
-            #################################
-            data_csv_only_file_list = make_data_csv_only_file_list( rough_s3_file_names_list, target_directory )
-
-            #####################################################################
-            # Make a list of unpaired file names to use for making table names
-            #####################################################################
-            unpaired_data_csv_file_list = make_unpaired_data_csv_file_list( rough_s3_file_names_list, target_directory )
-
-            #####################################################################
-            # Make a list of just short file names to use for making table names
-            #####################################################################
-            plain_names_list = make_plain_names_list( rough_s3_file_names_list, target_directory )
-
-            #####################################################
-            # Make List of .csv files that NEED a metadata_ file
-            #####################################################
-            files_that_need_metadata_files_list = []
-
-            # iterate through all data-files
-            for this_name in plain_names_list:
-
-                # make the name that a metadata_ file WOULD have
-                matching_name = target_directory + "metadata_" + this_name
-            
-                # if a data file does not have a matching metadata_file, add it
-                if matching_name not in rough_s3_file_names_list:
-                    # add to list 
-                    files_that_need_metadata_files_list.append( this_name )
+            # # load into pandas
+            # df = pd.read_csv(lambda_tmp_name_data)
 
 
-        except Exception as e:
-    
-            output = f"""Error: Could not read file lists from S3
-            Error Message = '{str(e)} 
+            # load .csv into pandas df
+            # try alt encoding if default does not work
+            try:
+                df = pd.read_csv( lambda_tmp_name_data )
+            except:
+                df = pd.read_csv( lambda_tmp_name_data , encoding = "ISO-8859-1" )
+
+
+            ########################################
+            # Primary Key Acceptability Check et al
+            ########################################
+            """
+            DynamoDB needs a unique primary key column
+            Make sure the first column is acceptable as a primary key:
+            Report an error flag for each issue you test for:
+
+            - flag report for first column:
+              - type == object
+              - nuls > 0
+              - isna > 0
+              - duplicates > 0
+            if flag number > 0 halt and report flags
+            if no flags: "ok, process, no warning flags on primary key column"
             """
             
-            # print for terminal
-            print(output)
+            # Run helper function to check for warning flags
+            warning_flags_list = make_primary_key_warning_flag_list(df)
 
-            statusCode = 403
+            # # for terminal or inspection
+            # print( "missing_data_flag: ", warning_flags_list )
 
-            # End the lambda function
-            return {
-                'statusCode': statusCode,
-                'body': output
-            }
+            if len(warning_flags_list) != 0:
 
-
-        #########################################
-        # make cleaned_aws_names_for_tables_list
-        #########################################
-        
-        cleaned_aws_names_for_tables_list = []
-
-        # remove "split" from root name
-        for this_name in plain_names_list:
-            # use helper function to remove "split###" from the names of split files
-            cleaned_aws_names_for_tables_list.append( remove_split_from_name(this_name) )
-
-        # remove duplicates
-        cleaned_aws_names_for_tables_list = list( set( cleaned_aws_names_for_tables_list ) )
-
-        #################################################
-        # make a list of tables that may need to be made
-        #################################################
-
-        list_of_tables_that_need_to_be_made = []
-
-        for this_name in cleaned_aws_names_for_tables_list:
-            # use helper function to remove "split###" from the names of split files
-            list_of_tables_that_need_to_be_made.append( this_name[:-4] )
-
-        # # inspection
-        # print( "list_all", list_all )
-        # print("list_of_subdirectories", list_of_subdirectories)
-        print( "split -> LIST OF LISTS OF FILES: \n" )
-        print( "split -> rough_s3_file_names_list", rough_s3_file_names_list )
-        # print( "split -> unpaired_data_csv_file_list", unpaired_data_csv_file_list )
-        # print( "split -> data_csv_only_file_list", data_csv_only_file_list )
-        # print( "split -> plain_names_list", plain_names_list )
-        # print( "split -> files_that_need_metadata_files_list", files_that_need_metadata_files_list )
-        # print( "split -> cleaned_aws_names_for_tables_list", cleaned_aws_names_for_tables_list )
-        # print( "split -> list_of_tables_that_need_to_be_made", list_of_tables_that_need_to_be_made )
-
-
-    ########################################################################
-    # Test AWS-DynamoDB if the tables that you want to create already exist
-    ########################################################################
-    # if they do does: pass error and tell user 
-
-    # Skip this step if the from_to is turned-on:
-    # in cases where from_to is used, the table already exists
-    if multi_part_or_split_csv_flag is False:
-
-        # TODO: this should be all plain names...
-        for this_name in cleaned_aws_names_for_tables_list:
-
-            # remove the .csv
-            this_name = this_name[:-4]
-
-            try:
-                response = dynamodb_client.describe_table(TableName=this_name)
-            
-                output = f"""Error: For *{this_name}* 
-                The {this_name} table you want to create ALREADY EXISTS. 
-                Please re-name your {this_name}.csv file with an unused table-name. 
+                output = f"""Error primay key warning for {this_file} with {warning_flags_list}: 
+                The first collumn of {this_file} cannot be a primary key.
+                Safety-checks returned the following warning flags:
+                {warning_flags_list}
                 """
-                statusCode = 403
-                body = "found same-name table"
+                # print for terminal
+                print(output)
+
+                statusCode = 430
 
                 # End the lambda function
                 return {
                     'statusCode': statusCode,
                     'body': output
                 }
+            
+            else:
+                # for terminal
+                print(f"""Check ok! file: {this_file} with warning list: {warning_flags_list} """)
+
+
+            #######################################
+            # Compare to size threshold and split!
+            #######################################
+
+            # find number of times df needs to be split to be under threshold
+            number_of_splits = check_threshold_OK_is_True_or_get_split_number( df, set_split_threshold_default_is_10k_rows )
+
+            # for terminal:
+            print(f"number of splits is [{number_of_splits}] for file [{this_file}] ('True' here means zero splits)")
+
+            if number_of_splits != True:
+
+                # for terminal:
+                print("Running file splitter, file size over threshold...")
+
+                # Run AWS version of Split Function
+                main_split_csv_iterator(number_of_splits)
+
+                # # for terminal:
+                # print("ALL tmp files after running splitter")
+                # print( print_aws_tmp_files() )
+                # print("CSV tmp files after running splitter")
+                # print( glob.glob("/tmp/*.csv") )
                 
-            except Exception:
-                print(f"""OK! "{this_name}" OK! Table does not exist yet for file/name: "{this_name}", Safe to proceed.""")
-                body = "OK: Table does (tables do) not exist yet"
+                # upload split files to s3 target_directory
+                list_of_tmp_files = glob.glob("/tmp/*.csv")
+                for this_tmp_file in list_of_tmp_files:
+
+                    # name of file in AWS-lambda /tmp/
+                    s3_name_data = target_directory + this_tmp_file[5:]
+
+                    upload_file_to_S3(s3_resource, s3_bucket_name, this_tmp_file, s3_name_data)
+
+                # delete original file from S3
+                # name of file in AWS-lambda /tmp/
+                s3_name_data = target_directory + this_file
+                s3_resource.Object(s3_bucket_name, s3_name_data).delete()
+
+                # # for terminal
+                # rough_s3_file_names_list2 = make_rough_S3_file_names_list( s3_bucket, target_directory )
+                # print("list of S3 files after split: ", rough_s3_file_names_list2)
+
+                # clear /tmp/
+                clear_tmp_directory()
+
+                files_were_split_flag = True
 
 
+        # after splitting all files: re-run making file name lists
+        if files_were_split_flag is True:
 
-    ###############
-    # For: From To
-    ###############
+            # change multi-part flag
+            multi_part_or_split_csv_flag = True
 
-    if multi_part_or_split_csv_flag is True:
-
-        # iterate through the cleaned aws tables names list (not "split")
-        for this_name in cleaned_aws_names_for_tables_list:
-
-            # remove the .csv
-            this_name_no_csv_suffix = this_name[:-4]
+            # redo with new files
+            ##########################################################
+            # redo S3: Make Lists of .CSV and Metadata_ files from S3
+            ##########################################################
+            # uses helper functions
 
             try:
-                response = dynamodb_client.describe_table(TableName=this_name_no_csv_suffix)
-            
-                table_needs_to_be_made_flag = False
+                #############################################################
+                # Get all file names from s3 directory (and sub-directories)
+                #############################################################
 
-                # for terminal
-                print(f"""multi-part mode: OK! This table exists:"{this_name_no_csv_suffix}" OK! """)
+                rough_s3_file_names_list = make_rough_S3_file_names_list( s3_bucket, target_directory )
 
-                list_of_tables_that_need_to_be_made.remove(this_name_no_csv_suffix)
+                #################################
+                # Make a data_csv_only_file_list
+                #################################
+                data_csv_only_file_list = make_data_csv_only_file_list( rough_s3_file_names_list, target_directory )
+
+                #####################################################################
+                # Make a list of unpaired file names to use for making table names
+                #####################################################################
+                unpaired_data_csv_file_list = make_unpaired_data_csv_file_list( rough_s3_file_names_list, target_directory )
+
+                #####################################################################
+                # Make a list of just short file names to use for making table names
+                #####################################################################
+                plain_names_list = make_plain_names_list( rough_s3_file_names_list, target_directory )
+
+                #####################################################
+                # Make List of .csv files that NEED a metadata_ file
+                #####################################################
+                files_that_need_metadata_files_list = []
+
+                # iterate through all data-files
+                for this_name in plain_names_list:
+
+                    # make the name that a metadata_ file WOULD have
+                    matching_name = target_directory + "metadata_" + this_name
                 
-            except:
-                table_needs_to_be_made_flag = True
+                    # if a data file does not have a matching metadata_file, add it
+                    if matching_name not in rough_s3_file_names_list:
+                        # add to list 
+                        files_that_need_metadata_files_list.append( this_name )
 
-                # for terminal
-                print(f"""multi-part mode TODO: This table needs to be made:"{this_name_no_csv_suffix}" """)
 
-    else:
-        table_needs_to_be_made_flag = True
+            except Exception as e:
+        
+                output = f"""Error: Could not read file lists from S3
+                Error Message = '{str(e)} 
+                """
+                
+                # print for terminal
+                print(output)
+
+                statusCode = 403
+
+                # End the lambda function
+                return {
+                    'statusCode': statusCode,
+                    'body': output
+                }
+
+
+            #########################################
+            # make cleaned_aws_names_for_tables_list
+            #########################################
+            
+            cleaned_aws_names_for_tables_list = []
+
+            # remove "split" from root name
+            for this_name in plain_names_list:
+                # use helper function to remove "split###" from the names of split files
+                cleaned_aws_names_for_tables_list.append( remove_split_from_name(this_name) )
+
+            # remove duplicates
+            cleaned_aws_names_for_tables_list = list( set( cleaned_aws_names_for_tables_list ) )
+
+            #################################################
+            # make a list of tables that may need to be made
+            #################################################
+
+            list_of_tables_that_need_to_be_made = []
+
+            for this_name in cleaned_aws_names_for_tables_list:
+                # use helper function to remove "split###" from the names of split files
+                list_of_tables_that_need_to_be_made.append( this_name[:-4] )
+
+            # # inspection
+            # print( "list_all", list_all )
+            # print("list_of_subdirectories", list_of_subdirectories)
+            print( "split -> LIST OF LISTS OF FILES: \n" )
+            print( "split -> rough_s3_file_names_list", rough_s3_file_names_list )
+            # print( "split -> unpaired_data_csv_file_list", unpaired_data_csv_file_list )
+            # print( "split -> data_csv_only_file_list", data_csv_only_file_list )
+            # print( "split -> plain_names_list", plain_names_list )
+            # print( "split -> files_that_need_metadata_files_list", files_that_need_metadata_files_list )
+            # print( "split -> cleaned_aws_names_for_tables_list", cleaned_aws_names_for_tables_list )
+            # print( "split -> list_of_tables_that_need_to_be_made", list_of_tables_that_need_to_be_made )
+
+
+        ########################################################################
+        # Test AWS-DynamoDB if the tables that you want to create already exist
+        ########################################################################
+        # if they do does: pass error and tell user 
+
+        # Skip this step if the from_to is turned-on:
+        # in cases where from_to is used, the table already exists
+        if multi_part_or_split_csv_flag is False:
+
+            # TODO: this should be all plain names...
+            for this_name in cleaned_aws_names_for_tables_list:
+
+                # remove the .csv
+                this_name = this_name[:-4]
+
+                try:
+                    response = dynamodb_client.describe_table(TableName=this_name)
+                
+                    output = f"""Error: For *{this_name}* 
+                    The {this_name} table you want to create ALREADY EXISTS. 
+                    Please re-name your {this_name}.csv file with an unused table-name. 
+                    """
+                    statusCode = 403
+                    body = "found same-name table"
+
+                    # End the lambda function
+                    return {
+                        'statusCode': statusCode,
+                        'body': output
+                    }
+                    
+                except Exception:
+                    print(f"""OK! "{this_name}" OK! Table does not exist yet for file/name: "{this_name}", Safe to proceed.""")
+                    body = "OK: Table does (tables do) not exist yet"
+
+
+
+        ###############
+        # For: From To
+        ###############
+
+        if multi_part_or_split_csv_flag is True:
+
+            # iterate through the cleaned aws tables names list (not "split")
+            for this_name in cleaned_aws_names_for_tables_list:
+
+                # remove the .csv
+                this_name_no_csv_suffix = this_name[:-4]
+
+                try:
+                    response = dynamodb_client.describe_table(TableName=this_name_no_csv_suffix)
+                
+                    table_needs_to_be_made_flag = False
+
+                    # for terminal
+                    print(f"""multi-part mode: OK! This table exists:"{this_name_no_csv_suffix}" OK! """)
+
+                    list_of_tables_that_need_to_be_made.remove(this_name_no_csv_suffix)
+                    
+                except:
+                    table_needs_to_be_made_flag = True
+
+                    # for terminal
+                    print(f"""multi-part mode TODO: This table needs to be made:"{this_name_no_csv_suffix}" """)
+
+        else:
+            table_needs_to_be_made_flag = True
 
 
 
@@ -2031,6 +2150,29 @@ def lambda_handler(event, context):
                 'statusCode': statusCode,
                 'body': output
             }
+
+
+    # exit whole tool if just-make-metadata flag is true.
+    if just_make_metadata_files_flag == True:
+
+            output = f"""
+            Metadata Files created and now in S3:
+            'just_make_metadata_files_flag == True'
+            was selected.
+            Done.
+            """
+            
+            # print for terminal
+            print(output)
+
+            statusCode = 200
+
+            # End the lambda function
+            return {
+                'statusCode': statusCode,
+                'body': output
+            }
+
 
 
     ##############################
@@ -2391,7 +2533,7 @@ def lambda_handler(event, context):
     # Final Output
     ###############
     status_code = 200
-    output = f"""v159 2022.01.04 Status: OK! Processes complete for these files: {cleaned_aws_names_for_tables_list}
+    output = f"""v161 2022.01.04 Status: OK! Processes complete for these files: {cleaned_aws_names_for_tables_list}
     See metadata_ files and original files in the new 'transfered_files' directory'
     Please check dynamoDB tables to see that datatypes and data transfer is satisfactory. 
     """
