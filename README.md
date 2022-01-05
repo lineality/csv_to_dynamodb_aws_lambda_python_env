@@ -4,7 +4,7 @@
 
 This is a solution to easily and automatically load .csv (comma, tab, etc. delimited) files into AWS-dynamoDB database data tables.
 
-Overall, a tool for loading .csv files into DynamoDB should be as simple as "load files" -> "push go" -> "done!" including the following features:
+A tool for loading .csv files into DynamoDB should be as simple as "load files" -> "push go" -> "done!" including the following features:
 1. It works on a whole folder/directory of files (not just one file at a time).
 2. It allows the user to select from_this_row and to_this_row in case only part of a file is to be uploaded (optionally, if desired).
 3. It allows for the user to manually specify column data types and column names IF needed, but does not require this by default. 
@@ -14,13 +14,14 @@ Overall, a tool for loading .csv files into DynamoDB should be as simple as "loa
 7. It should allow split-csv or multiple files to be automatically merged into the same data table.
 8. It actively scans for problems with the files and if found reports those to the user. 
 9. It will automatically create the data table, the fields, and the data-types, including the primary-key field. 
-10. It should be an all-inside-AWS solution, not requiring anyone to have special hardware or software. 
+10. It should be flexibly an (optionally) all-inside-AWS solution, not requiring anyone to have additional special hardware or software, and also allow steps to be done outside of AWS such as analyzing a .csv and the metadata on your local computer.  
 
-### Brief instructions for deployment and use: 
-#### Recombine the zipped uploadable python environment and upload it into an AWS Lambda Function. Upload your .csv files to AWS-S3 (AWS file storage). Point the tool to the file folder in S3. Hit 'Go' (activate the lambda function). That's all. 
+### Brief instructions for deployment and use of this tool: 
+#### Recombine the zipped uploadable python environment and upload it into an AWS Lambda Function. ( See this guide for splitting and recombining zip archives: https://github.com/lineality/linux_make_split_zip_archive_multiple_small_parts_for_AWS )
+Upload your .csv files to AWS-S3 (AWS file storage). Point the tool to the file folder in S3. Hit 'Go' (activate the lambda function). That's all. 
 
 ## Overview and Introduction
-#### The process of transferring data from a .csv file (for example) into a data table in dynamoDB (an AWS database) is not simple. Going the other way, making a .csv from a table is very simple, just one "make a .csv" button to push. Both should be easy.
+#### The process of transferring data from a .csv file (for example) into a data table in dynamoDB (an AWS database) (without tools such as this project aims to provide) is not simple. Yet going the other direction, making a .csv from a data table is very simple: just one "make a .csv" button to push. Both should be easy.
 
 ## List of properties a .csv file needs to have for it to be ready to be entered into a database table (using this automated system):
 1. the name of the .csv file must be formatted to be also the name of the table
@@ -30,12 +31,12 @@ Overall, a tool for loading .csv files into DynamoDB should be as simple as "loa
 
 #### In some cases you may want to run separate tests locally on datasets before uploading a modified and cleaned file to AWS. Separate tools for inspecting the above properties are included in this github repo. These datatype-tester tools can be used in google colab, a local python notebook, or a local .py file (e.g. for files too large for colab). 
 
-And there is a datatype-tester online colab here (and this notebook is in this repo for you to run locally or upload to google colab, aws-sagemaker, etc.):
+#### There is a datatype-tester online colab here (and this notebook is in this repo for you to run locally or upload to google colab, aws-sagemaker, etc.):
 https://colab.research.google.com/drive/18UwXMKqD-DLBs29RZYHa9RqrVdYa8rvK#scrollTo=_1r1SEvqCfdC 
 
 #### Once this is done, then any number of these checked and clean files should be able to be automatically processed to have the data loaded into database tables in AWS.
 
-# Deploying the python ENV into AWS:
+# Deploying the python env (venv environment) into AWS:
 
 Making an AWS lambda function is not too difficult but there should be instructions for that...(pending). 
 ## Brief Instructions
@@ -55,7 +56,8 @@ Making an AWS lambda function is not too difficult but there should be instructi
 8. Upload a zip file containing your function (provides as files in this repo, see below)
 9. You can run it like that, or make an api-gateway endpoint (and a colab to use that endpoint...optionally)
 
-You will also need to know how to load files into S3 (file storage in AWS).
+You will also need to know how to load files into S3 (file storage in AWS). The S3 web interface is mostly very user friendly. 
+
 
 #### The env file is split into small parts for easier uploading and downloading.
 Follow these instructions 
@@ -85,7 +87,7 @@ the data.csv and metadata files sorted into a 'completed filed' folder after com
 and the data is entered into a new (or specified old) dynamoDB database table.
 
 
-### Example user input
+## Example user input:
 ```
 input = {
     directory_name = "YOUR_directory_name"
@@ -93,7 +95,7 @@ input = {
 }
 ```
 
-# example metadata_csv file:
+## Example metadata_csv file:
 ```
 column_name,AWS_column_dtype,pandas_column_dtype,example_item_list,mixed_datatype_flag_list,missing_data_flag_list,duplicate_data_flag_list
 row_number,N,int64,11.0,False,False,False
@@ -106,7 +108,7 @@ Salary,N,int64,39343.0,False,False,False
 
 # Rules / Instructions
 
-## Cheat Sheet Instruction Summary
+## Cheat-Sheet Instruction Summary
 1. If you have not yet examined your files (file's metadata) yet,
 you can use the tool to make your metadata files (so you can then look at them), by setting the "just_make_metadata_files_flag" to "True":
 ```
