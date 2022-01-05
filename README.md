@@ -78,13 +78,14 @@ You will need to create an AWS-Lambda-Function with these permissions (given to 
 ```
 
 The idea is to dynamically automate the process of moving .csv files
-into dynamoDB,
-starting with a set of clean .csv files
-and ending with metadata files, file sorted into a 'completed' folder,
-and data entered into a new dynamoDB table
+into dynamoDB.
+We start with a set of clean .csv files (single or multiple per table),
+we use preexisting or create new metadata files, 
+the data.csv and metadata files sorted into a 'completed filed' folder after completion,
+and the data is entered into a new (or specified old) dynamoDB database table.
 
 
-### Example input
+### Example user input
 ```
 input = {
     directory_name = "YOUR_directory_name"
@@ -94,9 +95,11 @@ input = {
 
 # example metadata_csv file:
 ```
-headers, dynamoBD_data_type, 
-item_id, S
-item_number, N
+column_name,AWS_column_dtype,pandas_column_dtype,example_item_list,mixed_datatype_flag_list,missing_data_flag_list,duplicate_data_flag_list
+row_number,N,int64,11.0,False,False,False
+Years_Experience,N,float64,11.1,False,False,True
+Salary,N,int64,39343.0,False,False,False
+
 ```
 
 
