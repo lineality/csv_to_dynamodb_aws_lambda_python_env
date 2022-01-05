@@ -267,32 +267,51 @@ If you want to use the tool to make your file inspection meta_data files and sto
 
 
 
+
 # Workflow (How the Tool Works under the hood)
 1. preemptively clear the /tmp/ directory in lambda-function 
+
 2. user inputs a folder (a target s3 directory, in which are .csv files) 
-3. scan S3 folder for .csv files 
+
+3. scan S3 folder for .csv files (ignore non csv files)
+
 4. make a list of .csv files NOT including "metadata_" at the start. We will later iterate through this file 3 times. 
+
 5. track the many forms of names keeping track of the root name, the lambda name, the old s3 name and the new s3 name, split names, table names, etc.
+
 6. make a list of files that need meta-data files (there are several such related lists, and these are re-created after files are auto split if that happens)  
-7. iteration 1: iterate through list of data-csv files and check to see if there are any name collisions between file names and dynamoDB tables to be created (exit to error message if collision found) Note: extra logic for where from-to or multiple input files are used.
-8. iteration 2 and auto-split: iterate through files_that_need_metadata_files_list of data-csv files to make a list of unpaired files: use pandas to create a table with AWS datatypes, and move that metadata_file to s3. The goals here is to allow users to upload custom metadata files, but to default to automating that process.  
+
+#### Two steps need to happen before processing the files and iterating through the files to upload them to AWS datatables.
+7. There is the option to just create meta-data files before trying to load them. In this case, each data file has a metadata file made which includes primary key type warnings for all columns. 
+
+8. Auto Splitting: In the case of file splitting, the previous file listing steps need to be repeated from scratch and a new list of files made before proceeding. 
+
+#### Iterating Though and Processing Files
+9. iteration 1: iterate through list of data-csv files and check to see if there are any name collisions between file names and dynamoDB tables to be created (exit to error message if collision found) Note: extra logic for where from-to or multiple input files are used.
+
+10. iteration 2 and auto-split: iterate through files_that_need_metadata_files_list of data-csv files to make a list of unpaired files: use pandas to create a table with AWS datatypes, and move that metadata_file to s3. The goals here is to allow users to upload custom metadata files, but to default to automating that process.  
 Plus auto-split
 check each data csv file's shape to see if the file has more than 10,000 rows. If so: split/replace the file in S3.
 
-9. iteration 3: when all data-csv files are paired with a metadata_ file:  iterate through the list of all root files (see below)
+11. iteration 3: when all data-csv files are paired with a metadata_ file:  iterate through the list of all root files (see below)
 
 #### The next steps are done for each (iterating through each) data file in the 3rd and last pass through the list of data-csv files:
 
-10. The primary-key column/field is error-checked for 3 types of primary key errors and gives the user a warning to fix the file: missing data, duplicate rows, and mixed text/number data (e.g. text in a number column). Finding and outputting a warning here halts the whole process, so not all files will have been checked. 
+12. The primary-key column/field is error-checked for 3 types of primary key errors and gives the user a warning to fix the file: missing data, duplicate rows, and mixed text/number data (e.g. text in a number column). Finding and outputting a warning here halts the whole process, so not all files will have been checked. 
 
-11. lambda creates a new dynamoDB table with a name the same as the .csv file. Note: extra logic to skip this for from-to or multi-file-to-one-table input.
-12. lambda uses metadata_ file and data-csv file to load data into dynamoDB. Note: by default this is the whole file, but optionally a from_row and to_row can be specified by row number in csv
-13. after file is loaded successfully into dynamoDB, data-csv and metadata_csv are moved to a new directory (folder) called 'transferred files' (or whatever the name ends up being) (this involves copying to the new location and then deleting the old file from S3). Note: this is skipped when using from-to or multi-file-to-one-table as the whole upload process is not completed in one step.
-14. the aws Lambda /tmp/ copy of the file is deleted (to not overwhelm the fragile lambda-function)
+13. lambda creates a new dynamoDB table with a name the same as the .csv file. Note: extra logic to skip this for from-to or multi-file-to-one-table input.
+
+14. lambda uses metadata_ file and data-csv file to load data into dynamoDB. Note: by default this is the whole file, but optionally a from_row and to_row can be specified by row number in csv
+
+15. after file is loaded successfully into dynamoDB, data-csv and metadata_csv are moved to a new directory (folder) called 'transferred files' (or whatever the name ends up being) (this involves copying to the new location and then deleting the old file from S3). Note: this is skipped when using from-to or multi-file-to-one-table as the whole upload process is not completed in one step.
+
+16. the aws Lambda /tmp/ copy of the file is deleted (to not overwhelm the fragile lambda-function)
 
 #### These steps are done at the very end of the whole process after all files are processed (if there is no error that stops the process)
-15. remove all files from lambda /tmp/ directory
-16. output: list of tables created OR error message
+17. remove all files from lambda /tmp/ directory
+
+18. output: list of tables created OR error message
+
 
 
 
