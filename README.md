@@ -10,10 +10,11 @@ Overall, a tool for loading .csv files into DynamoDB should be as simple as "loa
 3. It allows for the user to manually specify column data types and column names IF needed, but does not require this by default. 
 4. It allows for very large file sizes automatically (with no user action needed). 
 5. It should allow for missing data in the .csv files. 
-6. It should allow split-csv or multiple files to be automatically merged into the same data table.
-7. It should be an all-inside-AWS solution, not requiring anyone to have special hardware or software. 
+6. It should allow you to create metadata files and inspect csv files for general properties and potential problems. 
+7. It should allow split-csv or multiple files to be automatically merged into the same data table.
 8. It actively scans for problems with the files and if found reports those to the user. 
 9. It will automatically create the data table, the fields, and the data-types, including the primary-key field. 
+10. It should be an all-inside-AWS solution, not requiring anyone to have special hardware or software. 
 
 ### Brief instructions for deployment and use: 
 #### Recombine the zipped uploadable python environment and upload it into an AWS Lambda Function. Upload your .csv files to AWS-S3 (AWS file storage). Point the tool to the file folder in S3. Hit 'Go' (activate the lambda function). That's all. 
