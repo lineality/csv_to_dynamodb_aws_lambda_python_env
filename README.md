@@ -27,10 +27,10 @@ Overall, a tool for loading .csv files into DynamoDB should be as simple as "loa
 3. the first column (being the primary key) must be made of unique items, no missing items, and must be all the same data type (e.g. no text strings mixed into otherwise all integers). 
 4. the data-types for the columns must be either correctly automatically detectable, or set by you in a simple metadata_file. 
 
-#### Tools for a simple inspection of the above properties are included in this github repo. These datatype-tester tools can be used in google colab, a local python notebook, or a local .py file (e.g. for files too large for colab). 
+#### In some cases you may want to run separate tests locally on datasets before uploading a modified and cleaned file to AWS. Separate tools for inspecting the above properties are included in this github repo. These datatype-tester tools can be used in google colab, a local python notebook, or a local .py file (e.g. for files too large for colab). 
 
-And there's a datatype-tester online colab here (and this notebook is in this repo for you to run locally or upload to google colab, aws-sagemaker, etc.):
-https://colab.research.google.com/drive/18UwXMKqD-DLBs29RZYHa9RqrVdYa8rvK#scrollTo=_1r1SEvqCfdC
+And there is a datatype-tester online colab here (and this notebook is in this repo for you to run locally or upload to google colab, aws-sagemaker, etc.):
+https://colab.research.google.com/drive/18UwXMKqD-DLBs29RZYHa9RqrVdYa8rvK#scrollTo=_1r1SEvqCfdC 
 
 #### Once this is done, then any number of these checked and clean files should be able to be automatically processed to have the data loaded into database tables in AWS.
 
