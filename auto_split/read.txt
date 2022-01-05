@@ -1,1 +1,0 @@
-Auto Split function automatically splits large files, you set the threshold.
