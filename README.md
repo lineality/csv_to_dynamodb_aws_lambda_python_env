@@ -107,166 +107,180 @@ Salary,N,int64,39343.0,False,False,False
 
 
 # Rules / Instructions
-
-## Cheat-Sheet Instruction Summary
+ 
+## Cheat Sheet Instruction Summary
 1. If you have not yet examined your files (file's metadata) yet,
 you can use the tool to make your metadata files (so you can then look at them), by setting the "just_make_metadata_files_flag" to "True":
 ```
 {
-  "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
-  "target_directory": "YOUR_FOLDER_NAME_HERE/",
-  "just_make_metadata_files_flag": "True"
+ "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
+ "target_directory": "YOUR_FOLDER_NAME_HERE/",
+ "just_make_metadata_files_flag": "True"
 }
 ```
-
+ 
 2. Put .csv files in the S3(AWS) folder.
-
+ 
 3. Point the lambda function at the correct S3 bucket and your folder:
 ```
 {
-  "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
-  "target_directory": "YOUR_FOLDER_NAME_HERE/"
+ "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
+ "target_directory": "YOUR_FOLDER_NAME_HERE/"
 }
 ```
 4. Run the lamabda Function (Hit the "Go" button.)
-
-
-
+ 
+ 
+ 
 ## Full Instructions
-
 Instruction for using the .csv auto-load Tool:
-
-Please read and follow these instructions, 
-and please tell me about any errors you recieve. 
-
-1. input file(s) must be one or more .csv files (no other formats, 
-other files will be ignored (or might break the tool)) 
-Do NOT put files into the tool that you do NOT want the file to process.
-
-2. input file(s) must be in a directory in an AWS S3 folder(directory)
-
+ 
+Please read and follow these instructions,
+and please report any errors you recieve.
+ 
+ 
+1. input file(s) must be one or more .csv files (no other formats,
+other files will be ignored (or might break the tool))
+Do NOT put files into the tool that you do NOT want the tool to process.
+ 
+2. input file(s) (.csv files) must be in a directory in an AWS-S3 folder(directory)
+ 
 3. this tool is an AWS lambda function which is or operates like an api-endpoint
-
-4. json-input: the json input for the lambda function(or endpoint)
+ 
+4. json-input: the json input for the lambda function(or endpoint),
+which directs the tool to your .csv files,
 must look like this:
 ```
 {
-  "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
-  "target_directory": "YOUR_FOLDER_NAME_HERE/"
+ "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
+ "target_directory": "YOUR_FOLDER_NAME_HERE/"
 }
 ```
 You can also make or use more sub-folders (directories) to organize your files.
 In this case combine all folders (the path) to the target directory
 ```
 {
-  "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
-  "target_directory": "YOUR_FOLDER_NAME_HERE/YOUR_SUB_FOLDER_NAME_HERE/"
+ "s3_bucket_name": "YOUR_S3_BUCKET_NAME_HERE",
+ "target_directory": "YOUR_FOLDER_NAME_HERE/YOUR_SUB_FOLDER_NAME_HERE/"
 }
 ```
 Here is an example using all optional fields (to be explained below):
 ```
 {
-  "s3_bucket_name": "YOUR_BUCKET_NAME",
-  "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
-  "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/",
-  "multi_part_or_split_csv_flag": "True",
-  "FROM_here_in_csv": 0,
-  "TO_here_in_csv": 4,
-  "set_split_threshold_default_is_10k_rows": 5000,
-  "just_make_metadata_files_flag": False
+ "s3_bucket_name": "YOUR_BUCKET_NAME",
+ "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
+ "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/",
+ "multi_part_or_split_csv_flag": "True",
+ "FROM_here_in_csv": 0,
+ "TO_here_in_csv": 4,
+ "set_split_threshold_default_is_10k_rows": 5000,
+ "just_make_metadata_files_flag": False
 }
 ```
-
-5. The csv-tool makes a data-table in an AWS-database from your .csv file. 
-Make the name of your .csv file the same as what you want the AWS database table to be called. 
-The name of each file must be:
+But to not mix levels of directories. S3 is not a real file system, and any sub-folder in the folder that you want will be seen as just more files in that main folder (not files in a subfolder).
+ 
+5. Table Name = File Name:
+The csv-tool makes a data-table in an AWS-database from your .csv file (this is the overall goal).
+Make the name of your .csv file the same as what you want the AWS database table to be called.
+Naming Rules: The name of each file must be:
 ```
-Between 3 and 255 characters, containing only letters, numbers, underscores (_), hyphens (-), and periods (.)
+"Between 3 and 255 characters, containing only letters, numbers, underscores (_), hyphens (-), and periods (.)"
 ```
 This is because the database table is given the same name as the .csv file.
-Every table must have a unique name (so each .csv file must have a unique name). 
-
-6. The table must have a unique primary key. And the first column must be 
-that unique key. A unique row-ID number will work if there is 
-no meaningful unique row key. 
-(So you may need to add that (ask if you need help).
-
-7. The tool will scan for 3 types of primary key errors and give you a warning to fix the file: missing data, 
-duplicate rows, and 
-mixed text/number data (e.g. text in a number column). 
-Finding a warning here halts the whole process, so not all files will have been checked. 
-
-8. Completed files (fully check and moved into a table) will be moved into 
+Every table must have a unique name (so each .csv file must have a unique name).
+ 
+6. The (database) table must have a unique primary key. And the first column (of your .csv) must be that unique key. A unique row-ID number will work if there is no meaningful unique row key.
+ 
+So you may need to add a unique row. There is a feature in the tool to add a unique row. The tool will exit after adding the row if this option is selected.
+e.g.
+```
+{
+ "s3_bucket_name": "YOUR_BUCKET_NAME",
+ "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
+ "just_make_new_primary_key_first_column": "CSV_FILE_THAT_NEEDS_THE_ROW"
+}
+```
+ 
+7. The tool will scan for 3 types of primary key errors and give you a warning to fix the file: missing data,
+duplicate rows, and
+mixed text/number data (e.g. text in a number column).
+Finding a warning here halts the whole process, so not all files will have been checked.
+ 
+8. Completed files (fully check and moved into a table) will be moved into
 a new directory called (by default) "default_folder_for_completed_csv_files/",
-but you can pick a new destination in your endpoint-json if you want: 
+but you can pick a new destination in your endpoint-json if you want:
 e.g.
 ```
 "default_folder_for_completed_csv_files" : "THIS_FOLDER/"
 ```
-Files not yet moved into AWS will remain in the original directory. 
+Files not yet moved into AWS will remain in the original directory.
 Please do NOT change the the destination folder to be INSIDE of your sub-folder.
 e.g.
 ```
 {
-  "s3_bucket_name": "YOUR_BUCKET_NAME",
-  "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
-  "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/"
+ "s3_bucket_name": "YOUR_BUCKET_NAME",
+ "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
+ "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/"
 }
 ```
-
-9. Please read the output of the function clearly 
-(to see if there was an error or if the process completed). 
-Some errors will regard your files and you can fix them. 
-Other errors may indicate updates needed for the tool. 
-Please report all errors we can understand this process well. 
-
-10. Please check the new data-tables in AWS to make sure they look as you want them to look. 
-
-11. From To: 
-The default mode is to put one data-csv file into one dynamoDB table, 
+ 
+9. Please read the output of the function clearly
+(to see if there was an error or if the process completed).
+Some errors will regard your files and you can fix them.
+Other errors may indicate updates needed for the tool.
+Please report all errors we can understand this process well.
+ 
+10. Please check the new data-tables in AWS to make sure they look as you want them to look.
+ 
+11. From To:
+The default mode is to put one data-csv file into one dynamoDB table,
 however you can select from-to for which rows you want to select to upload.
-This from-to will disable moving completed files. 
-From-to cannot be used along with split-multi files. 
-Starting at 1 or 0 have the same effect, starting from the begining. 
+This from-to will disable moving completed files.
+From-to cannot be used along with split-multi files.
+Starting at 1 or 0 have the same effect, starting from the begining.
 ```
 {
-  "s3_bucket_name": "YOUR_BUCKET_NAME",
-  "target_directory": "YOUR_FOLDER/OPTIONAL_SUB_FOLDER/",
-  "FROM_here_in_csv": 3,
-  "TO_here_in_csv": 7
+ "s3_bucket_name": "YOUR_BUCKET_NAME",
+ "target_directory": "YOUR_FOLDER/OPTIONAL_SUB_FOLDER/",
+ "FROM_here_in_csv": 3,
+ "TO_here_in_csv": 7
 }
 ```
-
-12. Split Files & auto-split: As with meta-data, file splitting can be automatic or manual. The automatic splitting does not require any addition steps, beyond re-running the function if it times out to keep going through the files. 
-
-Sometimes csv files are very large and it is best to split them into pieces before uploading them (so that the tool does not time-out in the middle of a file). 
+ 
+12. Split Files & auto-split:
+As with meta-data, file splitting can be automatic or manual. The automatic splitting does not require any addition steps, beyond re-running the function if it times out to keep going through the files.
+ 
+Sometimes csv files are very large and it is best to split them into pieces before uploading them (so that the tool does not time-out in the middle of a file).
 This csv uploader tool is designed to work with (and includes a version of)  this csv splitter:
-https://github.com/lineality/split_csv_python_script 
-
+https://github.com/lineality/split_csv_python_script
+ 
 As a rule of thumb
 files with more than 10,000 row should be split. The auto-splitter will do this automatically, though you custom set threshold, which is default set to 10,000 rows. this json choice is called "set_split_threshold_default_is_10k_rows"
-
+ 
 If there are many parts and the tool times out, just keep running it until all the parts get completed and moved to the 'completed files" folder.
-
-You can manually split the file yourself and put all the split files into the target direction, 
+ 
+You can manually split the file yourself and put all the split files into the target direction,
 hit GO (proverbially) and the tool will put them all into the same table.
-Each part must be suffixed with _split__###.csv 
-
- This function also works to put two data-csv files into the SAME table BUT: be careful not to overwrite an existing table, and multiple component files (when putting multiple data-csv files into one dynamoDB table) must be given the same name and individually put into S3 and run separately.
-
-Note: be careful about mixing split and many other non-split files together, as processing split-files will turn off the protection against over-writing an existing table. 
-
+Each part must be suffixed with _split__###.csv
+ 
+This function also works to put two data-csv files into the SAME table BUT: be careful not to overwrite an existing table, and multiple component files (when putting multiple data-csv files into one dynamoDB table) must be given the same name and individually put into S3 and run separately.
+ 
+Note: be careful about mixing split and many other non-split files together, as processing split-files will turn off the protection against over-writing an existing table.
+ 
+Timing Out: The reason why large files must be split is that a lambda function has a maximum time (15min) for how long it can run. If a big .csv file takes more time than 15min, the process will crash in the middle and no progress can be made by re-running the tool. On the other hand, if the S3 folder contains many small files (that each take much less than 15 minutes to run) then running the lambda function over and over will gradually process all of the files. Note that there will still be an error returned when the lambda function times out.
+ 
 13. You will get an error if you try to use split-file and from-to at the same time.
-
+ 
 14. just_make_metadata_files_flag:
 If you want to use the tool to make your file inspection meta_data files and stop there (so you can examine those meta_data files before proceeding), then turn on (set to True) the just_make_metadata_files_flag == True
 ```
 {
-  "s3_bucket_name": "YOUR_BUCKET_NAME",
-  "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
-  "just_make_metadata_files_flag": "False"
+ "s3_bucket_name": "YOUR_BUCKET_NAME",
+ "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
+ "just_make_metadata_files_flag": "False"
 }
 ```
+
 
 
 
@@ -331,3 +345,10 @@ Map (dictionary/json) = M
 List (array) = L
 
 ```
+
+
+# More Commentary
+
+The ideal is to make this tool as simple to use as possible. But it is not always ideal for the user to do literally nothing and not even look at or make any decisions about what they are doing. Yes, this tool is designed to simply try to process whatever file you put into it, but that is based on the assumption that the user has chosen and crafted that file to be processed. 
+
+
