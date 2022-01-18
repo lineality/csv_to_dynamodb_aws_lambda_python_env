@@ -48,5 +48,8 @@ def create_new_custom_primary_key_column(df, custom_name_string_prefix):
 
 df = create_new_custom_primary_key_column(df, "Test")
 
+# output new combined file
+df.to_csv("PICK_YOUR_NAME.csv", index=False)
+
 # inspection
 df.head()
