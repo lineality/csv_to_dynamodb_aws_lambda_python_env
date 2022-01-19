@@ -1,5 +1,5 @@
 """
-v161 2022.01.04
+v167 2022.01.18
 automatic .csv to AWS-dynamoDB -- a python AWS-lambda-function
 
 this lambda function will need these permissions:
@@ -18,13 +18,15 @@ starting with a set of clean .csv files
 and ending with metadata files, file sent to a 'completed' folder,
 and the data entered into a new dynamoDB table. (simplified example)
 
-TODO:
-1. another version to just make metadata files to inspect
-2. another version to add data to another existing dynamoDB table
-maybe: merging .csv files?
-3. should directory be followed by a / in input?
+# example metadata_csv file, for making custom files:
+```
+column_name,AWS_column_dtype,pandas_column_dtype,example_item_list,mixed_datatype_flag_list,missing_data_flag_list,duplicate_data_flag_list
+row_id,S,object,1,True,False,False
+YearsExperience,N,float64,1.1,False,False,True
+Salary,N,int64,39343,False,False,False
+```
 
-# Example input
+# Examples of input
 input = {
     directory_name = "YOUR_S3_DIRECTORY_NAME",
     s3_bucket_name = "YOUR_BUCKET_NAME"
@@ -35,12 +37,14 @@ e.g.
   "s3_bucket_name": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME"
 }
+
 or
 {
   "s3_bucket_name": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
   "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/"
 }
+
 or: if you are going from_to within an input file
 {
   "s3_bucket_name": "YOUR_BUCKET_NAME",
@@ -48,6 +52,7 @@ or: if you are going from_to within an input file
   "default_folder_for_completed_csv_files": "COMPLETED_FILES_FOLDER_NAME/",
   "multi_part_or_split_csv_flag": "True"
 }
+
 or: if you are going from_to within an input file
 {
   "s3_bucket_name": "YOUR_BUCKET_NAME",
@@ -58,6 +63,7 @@ or: if you are going from_to within an input file
   "TO_here_in_csv": 4
 }
 
+or
 {
   "s3_bucket_name": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME/",
@@ -66,6 +72,7 @@ or: if you are going from_to within an input file
   "TO_here_in_csv": 4
 }
 
+or
 {
   "s3_bucket_name": "YOUR_BUCKET_NAME",
   "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
@@ -80,12 +87,7 @@ https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBMapper.
 https://www.tutorialspoint.com/dynamodb/dynamodb_data_types.htm
 https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html#HowItWorks.DataTypes
 
-# example metadata_csv file, for making custom files:
-```
-headers, dynamoBD_data_type, 
-item_id, S
-item_number, N
-```
+
 """
 
 
@@ -117,21 +119,22 @@ you can use the tool to make your metadata files (so you can then look at them),
 
 
 ## Full Instructions
-
 Instruction for using the .csv auto-load Tool:
 
 Please read and follow these instructions, 
-and please tell me about any errors you recieve. 
+and please report any errors you recieve. 
+
 
 1. input file(s) must be one or more .csv files (no other formats, 
 other files will be ignored (or might break the tool)) 
-Do NOT put files into the tool that you do NOT want the file to process.
+Do NOT put files into the tool that you do NOT want the tool to process.
 
-2. input file(s) must be in a directory in an AWS S3 folder(directory)
+2. input file(s) (.csv files) must be in a directory in an AWS-S3 folder(directory)
 
 3. this tool is an AWS lambda function which is or operates like an api-endpoint
 
-4. json-input: the json input for the lambda function(or endpoint)
+4. json-input: the json input for the lambda function(or endpoint),
+which directs the tool to your .csv files,
 must look like this:
 ```
 {
@@ -160,20 +163,29 @@ Here is an example using all optional fields (to be explained below):
   "just_make_metadata_files_flag": False
 }
 ```
+But to not mix levels of directories. S3 is not a real file system, and any sub-folder in the folder that you want will be seen as just more files in that main folder (not files in a subfolder). 
 
-5. The csv-tool makes a data-table in an AWS-database from your .csv file. 
+5. Table Name = File Name: 
+The csv-tool makes a data-table in an AWS-database from your .csv file (this is the overall goal). 
 Make the name of your .csv file the same as what you want the AWS database table to be called. 
-The name of each file must be:
+Naming Rules: The name of each file must be:
 ```
-Between 3 and 255 characters, containing only letters, numbers, underscores (_), hyphens (-), and periods (.)
+"Between 3 and 255 characters, containing only letters, numbers, underscores (_), hyphens (-), and periods (.)"
 ```
 This is because the database table is given the same name as the .csv file.
 Every table must have a unique name (so each .csv file must have a unique name). 
 
-6. The table must have a unique primary key. And the first column must be 
-that unique key. A unique row-ID number will work if there is 
-no meaningful unique row key. 
-(So you may need to add that (ask if you need help).
+6. The (database) table must have a unique primary key. And the first column (of your .csv) must be that unique key. A unique row-ID number will work if there is no meaningful unique row key. 
+
+So you may need to add a unique row. There is a feature in the tool to add a unique row. The tool will exit after adding the row if this option is selected.
+e.g.
+```
+{
+  "s3_bucket_name": "YOUR_BUCKET_NAME",
+  "target_directory": "YOUR_S3_DIRECTORY_NAME/OPTIONAL_SUBFOLDER_NAME",
+  "just_make_new_primary_key_first_column": "CSV_FILE_THAT_NEEDS_THE_ROW"
+}
+```
 
 7. The tool will scan for 3 types of primary key errors and give you a warning to fix the file: missing data, 
 duplicate rows, and 
@@ -221,7 +233,8 @@ Starting at 1 or 0 have the same effect, starting from the begining.
 }
 ```
 
-12. Split Files & auto-split: As with meta-data, file splitting can be automatic or manual. The automatic splitting does not require any addition steps, beyond re-running the function if it times out to keep going through the files. 
+12. Split Files & auto-split: 
+As with meta-data, file splitting can be automatic or manual. The automatic splitting does not require any addition steps, beyond re-running the function if it times out to keep going through the files. 
 
 Sometimes csv files are very large and it is best to split them into pieces before uploading them (so that the tool does not time-out in the middle of a file). 
 This csv uploader tool is designed to work with (and includes a version of)  this csv splitter:
@@ -240,7 +253,9 @@ Each part must be suffixed with _split__###.csv
 
 Note: be careful about mixing split and many other non-split files together, as processing split-files will turn off the protection against over-writing an existing table. 
 
-13. You will get an error if you try to use split-file and from-to at the same time.
+Timing Out: The reason why large files must be split is that a lambda function has a maximum time (15min) for how long it can run. If a big .csv file takes more time than 15min, the process will crash in the middle and no progress can be made by re-running the tool. On the other hand, if the S3 folder contains many small files (that each take much less than 15 minutes to run) then running the lambda function over and over will gradually process all of the files. Note that there will still be an error returned when the lambda function times out. 
+
+13. You will get an error if you try to use split-file and from-to at the same time. 
 
 14. just_make_metadata_files_flag:
 If you want to use the tool to make your file inspection meta_data files and stop there (so you can examine those meta_data files before proceeding), then turn on (set to True) the just_make_metadata_files_flag == True
@@ -254,83 +269,96 @@ If you want to use the tool to make your file inspection meta_data files and sto
 
 
 
+# Workflow (How the Tool Works under the hood)
+1. preemptively clear the /tmp/ directory in lambda-function 
 
-# Workflow
-1. pre-emptively clear the /tmp/ directory in lambda-function 
 2. user inputs a folder (a target s3 directory, in which are .csv files) 
-3. scan S3 folder for .csv files 
+
+3. scan S3 folder for .csv files (ignore non csv files)
+
 4. make a list of .csv files NOT including "metadata_" at the start. We will later iterate through this file 3 times. 
-5. track forms of names keeping track of the root name, the lambda name, the olds3 name and the news3 name is task, etc.
-6. make a list of files that need meta-data files  
-7. iteration 1: iterate through list of data-csv files and check to see if there are any name collisions between file names and dynamoDB tables to be created (exit to error message if collision found) Note: extra logic for where from-to or multiple input files are used.
-8. iteration 2: iterate through files_that_need_metadata_files_list of data-csv files to make a list of unpaired files: use pandas to create a table with AWS datatypes, and move that metadata_file to s3. The goals here is to allow users to upload custom metadata files, but to default to automating that process.  
-9. iteration 3: when all data-csv files are paired with a metadata_ file:  iterate through the list of all root files (see below)
+
+5. track the many forms of names keeping track of the root name, the lambda name, the old s3 name and the new s3 name, split names, table names, etc.
+
+6. make a list of files that need meta-data files (there are several such related lists, and these are re-created after files are auto split if that happens)  
+
+#### Two steps need to happen before processing the files and iterating through the files to upload them to AWS datatables.
+7. There is the option to just create meta-data files before trying to load them. In this case, each data file has a metadata file made which includes primary key type warnings for all columns. 
+
+8. Auto Splitting: In the case of file splitting, the previous file listing steps need to be repeated from scratch and a new list of files made before proceeding. 
+
+#### Iterating Though and Processing Files
+9. iteration 1: iterate through list of data-csv files and check to see if there are any name collisions between file names and dynamoDB tables to be created (exit to error message if collision found) Note: extra logic for where from-to or multiple input files are used.
+
+10. iteration 2 and auto-split: iterate through files_that_need_metadata_files_list of data-csv files to make a list of unpaired files: use pandas to create a table with AWS datatypes, and move that metadata_file to s3. The goals here is to allow users to upload custom metadata files, but to default to automating that process.  
+Plus auto-split
+check each data csv file's shape to see if the file has more than 10,000 rows. If so: split/replace the file in S3.
+
+11. iteration 3: when all data-csv files are paired with a metadata_ file:  iterate through the list of all root files (see below)
 
 #### The next steps are done for each (iterating through each) data file in the 3rd and last pass through the list of data-csv files:
 
-10. The primarny-key column/field is error-checked for 3 types of primary key errors and gives the user a warning to fix the file: missing data, duplicate rows, and mixed text/number data (e.g. text in a number column). Finding and outputting a warning here halts the whole process, so not all files will have been checked. 
+12. The primary-key column/field is error-checked for 3 types of primary key errors and gives the user a warning to fix the file: missing data, duplicate rows, and mixed text/number data (e.g. text in a number column). Finding and outputting a warning here halts the whole process, so not all files will have been checked. 
 
-11. lambda creates a new dynamoDB table with a name the same as the .csv file. Note: extra logic to skip this for from-to or multi-file-to-one-table input.
-12. lambda uses metadata_ file and data-csv file to load data into dynamoDB. Note: by default this is the whole file, but optionally a from_row and to_row can be specified by row number in csv
-13. after file is loaded successfully into dynamoDB, data-csv and metadata_csv are moved to a new directory (folder) called 'tranferred files' (or whatever the name ends up being) (this involves copying to the new location and then deleting the old file from S3). Note: this is skipped when using from-to or multi-file-to-one-table as the whole upload process is not completed in one step.
-14. the aws Lambda /tmp/ copy of the file is deleted (to not overwhelm the fragile lambda-function)
+13. lambda creates a new dynamoDB table with a name the same as the .csv file. Note: extra logic to skip this for from-to or multi-file-to-one-table input.
+
+14. lambda uses metadata_ file and data-csv file to load data into dynamoDB. Note: by default this is the whole file, but optionally a from_row and to_row can be specified by row number in csv
+
+15. after file is loaded successfully into dynamoDB, data-csv and metadata_csv are moved to a new directory (folder) called 'transferred files' (or whatever the name ends up being) (this involves copying to the new location and then deleting the old file from S3). Note: this is skipped when using from-to or multi-file-to-one-table as the whole upload process is not completed in one step.
+
+16. the aws Lambda /tmp/ copy of the file is deleted (to not overwhelm the fragile lambda-function)
 
 #### These steps are done at the very end of the whole process after all files are processed (if there is no error that stops the process)
-15. remove all files from lambda /tmp/ directory
-16. output: list of tables created OR error message
-17. auto-split involves running the main lamba-function as another function
-and restarting the function if large files are found and then split,
-so that the file-names for the whole function are not changed-mid-way. 
+17. remove all files from lambda /tmp/ directory
+
+18. output: list of tables created OR error message
 """
 
 # Import Libraries and Packages for Python
 import boto3
+import datetime
 import glob 
 import json
 import io
+import numpy as np
 import os
-import re
 import pandas as pd
+import re
 import time
-import datetime
+
 
 
 ###################
 # Helper Functions
 ###################
 
+# helper function
+def make_new_primary_key_first_column(df):
 
+    # Create a new row containing row numbers:
+    df['Row_Number'] = np.arange(df.shape[0]) + 1
+
+    # Select new row to be moved to the front (made the first column)
+    new_first_column = df.pop('Row_Number')
+      
+    # Move new row to the front (make it the first column)
+    df.insert(0, 'Row_Number', new_first_column)
+
+    return df
+
+
+# helper function
 def get_csv_from_S3_to_lambda_tmp(s3_client, s3_bucket_name, S3_file_name, lambda_tmp_file_name):
-    ###################
-    # Get .csv from S3
-    ###################
 
-    try:
-        # 2
-        # Get .csv from S3 (note: not just readable text from it, but the whole file)
-        response = s3_client.get_object(Bucket = s3_bucket_name, Key = S3_file_name)
-        raw_csv = response['Body'].read().decode('utf-8')
+    # Get .csv from S3 (note: not just readable text from it, but the whole file)
+    response = s3_client.get_object(Bucket = s3_bucket_name, Key = S3_file_name)
+    raw_csv = response['Body'].read().decode('utf-8')
 
-        # save file in /tmp/ directory because AWS requires 
-        with open(lambda_tmp_file_name, 'w') as data:
-            data.write(raw_csv)
+    # save file in /tmp/ directory because AWS requires 
+    with open(lambda_tmp_file_name, 'w') as data:
+        data.write(raw_csv)
 
-    except Exception as e:
 
-        output = f"""Error: Could not get data .csv file from S3
-        Error Message = {str(e)} 
-        """
-        
-        # print for terminal
-        print(output)
-
-        statusCode = 403
-
-        # End the lambda function
-        return {
-            'statusCode': statusCode,
-            'body': output
-        }
 
 
 # helper function 
@@ -1437,14 +1465,34 @@ def lambda_handler(event, context):
 
         # For terminal
         print("flag check: set by parameter just_make_metadata_files_flag: ", just_make_metadata_files_flag)
-        #print("flag type: ", type(just_make_metadata_files_flag))
 
     except:
         just_make_metadata_files_flag = False
 
         # For terminal
         print("flag check: default value just_make_metadata_files_flag: ", just_make_metadata_files_flag)
-        #print("flag type: ", type(multi_part_or_split_csv_flag))
+
+
+
+    # just_make_new_primary_key_first_column
+    try:
+        just_make_new_primary_key_first_column = event["just_make_new_primary_key_first_column"]
+
+        # # String to boolean
+        # if just_make_new_primary_key_first_column == "True":
+        #     just_make_new_primary_key_first_column = True
+        # else:
+        #     just_make_new_primary_key_first_column = False
+
+        # For terminal
+        print("flag check: set by parameter just_make_new_primary_key_first_column: ", just_make_new_primary_key_first_column)
+
+
+    except:
+        just_make_new_primary_key_first_column = False
+
+        # For terminal
+        print("flag check: default value just_make_new_primary_key_first_column: ", just_make_new_primary_key_first_column)
 
 
 
@@ -1679,8 +1727,111 @@ def lambda_handler(event, context):
         }
 
 
+    #########################################
+    # just_make_new_primary_key_first_column
+    #########################################
 
-    # TODO UNDER CONSTRUCTION
+    if just_make_new_primary_key_first_column != False:
+
+        #                       * * *
+        ######################## \|/
+        # make bouquet of names   |/
+        ########################  |
+        # name of file in AWS-lambda /tmp/
+        s3_name_data = target_directory + just_make_new_primary_key_first_column
+        # name of file in AWS-lambda /tmp/
+        lambda_tmp_name_data = '/tmp/' + just_make_new_primary_key_first_column
+
+        # pull file into lambda /tmp/
+        get_csv_from_S3_to_lambda_tmp(s3_client, s3_bucket_name, s3_name_data, lambda_tmp_name_data)
+
+        # load .csv into pandas df
+        # try alt encoding if default does not work
+        try:
+            df = pd.read_csv( lambda_tmp_name_data )
+        except:
+            df = pd.read_csv( lambda_tmp_name_data , encoding = "ISO-8859-1" )
+
+        ############################
+        # Modify the dataframe (df)
+        ############################
+
+        try:
+            # call the function
+            df = make_new_primary_key_first_column(df)
+
+        except Exception as e:
+            output = f"""Error: Could not Modify the .csv -> just_make_new_primary_key_first_column
+            Error Message = '{str(e)} 
+            """
+            
+            # print for terminal
+            print(output)
+
+            statusCode = 403
+
+            # End the lambda function
+            return {
+                'statusCode': statusCode,
+                'body': output
+            }
+
+        ########################
+        # Modify the /tmp/ .csv
+        ########################
+        """
+        Note: Since you are saving the csv anyway, another option is
+        to save the index then add the name of that index to the start
+        of the .csv
+        """
+
+        # output new combined file
+        df.to_csv(lambda_tmp_name_data, index=False)
+
+        #############################
+        # Upload: Modify the S3 .csv
+        #############################
+
+        try:
+            # uplooad file to S3
+            upload_file_to_S3(s3_resource, s3_bucket_name, lambda_tmp_name_data, s3_name_data)
+
+        except Exception as e:
+            output = f"""Error: Could not Upload to S3 -> just_make_new_primary_key_first_column
+            Error Message = '{str(e)} 
+            """
+            
+            # print for terminal
+            print(output)
+
+            statusCode = 403
+
+            # End the lambda function
+            return {
+                'statusCode': statusCode,
+                'body': output
+            }
+
+
+        #######
+        # Exit
+        #######
+        output = f"""Success: new first column added 
+        to {just_make_new_primary_key_first_column} 
+        No Error
+        """
+        
+        # print for terminal
+        print(output)
+
+        statusCode = 200
+
+        # End the lambda function
+        return {
+            'statusCode': statusCode,
+            'body': output
+        }   
+
     ##############################################################
     # Auto-Split: check each file to see if it needs to be split.
     ##############################################################
@@ -2010,6 +2161,7 @@ def lambda_handler(event, context):
     make new metadata_ files so that every file has a pair:
     this uses the Datatype_Tester.py component
 
+    Steps:
     1. iterate through files_that_need_metadata_files_list (OK)
     2. get this_file from s3 (OK)
     3. make a metadata_ this_file
@@ -2018,7 +2170,7 @@ def lambda_handler(event, context):
     Keep iterating
     """
 
-    # 1
+    # Step 1
     for this_file in files_that_need_metadata_files_list:
 
         #                       * * *
@@ -2049,48 +2201,38 @@ def lambda_handler(event, context):
         ###################
         # Get .csv from S3
         ###################
+        try:
+            # Step 2
+            get_csv_from_S3_to_lambda_tmp(s3_client, s3_bucket_name, s3_name_data, lambda_tmp_name_data)
 
-        get_csv_from_S3_to_lambda_tmp(s3_client, s3_bucket_name, s3_name_data, lambda_tmp_name_data)
-
-        # try:
-        #     # 2
-        #     # Get .csv from S3 (note: not just readable text from it, but the whole file)
-        #     response = s3_client.get_object(Bucket = s3_bucket_name, Key = s3_name_data)
-        #     raw_csv = response['Body'].read().decode('utf-8')
-
-        #     # save file in /tmp/ directory because AWS requires 
-        #     with open(lambda_tmp_name_data, 'w') as data:
-        #         data.write(raw_csv)
-
-        #     # # inspection
-        #     # print("csv load Testing: These are files in AWS:")
-        #     # print_aws_tmp_files()
+            # # inspection
+            # print("csv load Testing: These are files in AWS:")
+            # print_aws_tmp_files()
 
 
-        # except Exception as e:
+        except Exception as e:
     
-        #     output = f"""Error: Could not get data .csv file from S3
-        #     Error Message = {str(e)} 
-        #     """
+            output = f"""Error: Could not get data .csv file from S3
+            Error Message = {str(e)} 
+            """
             
-        #     # print for terminal
-        #     print(output)
+            # print for terminal
+            print(output)
 
-        #     statusCode = 403
+            statusCode = 403
 
-        #     # End the lambda function
-        #     return {
-        #         'statusCode': statusCode,
-        #         'body': output
-        #     }
+            # End the lambda function
+            return {
+                'statusCode': statusCode,
+                'body': output
+            }
 
 
         ######################
         # Make metadata_ file
         ######################
-
         try:
-            # 3
+            # Step 3
             # make metadata_ file
             make_metadata_csv( lambda_tmp_name_data )
 
@@ -2124,11 +2266,11 @@ def lambda_handler(event, context):
         ##############################
 
         try:
-            # 4
+            # Step 4
             # Upload file into S3 bucket
             s3_bucket.upload_file(lambda_tmp_name_meta, s3_metadata_name)
             
-            # 5
+            # Step 5
             # remove file from temp to prevent issues because AWS is buggy
             os.remove(lambda_tmp_name_meta) 
             os.remove(lambda_tmp_name_data) 
@@ -2151,6 +2293,9 @@ def lambda_handler(event, context):
                 'body': output
             }
 
+    #################
+    # Option to Exit
+    #################
 
     # exit whole tool if just-make-metadata flag is true.
     if just_make_metadata_files_flag == True:
@@ -2533,7 +2678,7 @@ def lambda_handler(event, context):
     # Final Output
     ###############
     status_code = 200
-    output = f"""v161 2022.01.04 Status: OK! Processes complete for these files: {cleaned_aws_names_for_tables_list}
+    output = f"""v167 2022.01.18 Status: OK! Processes complete for these files: {cleaned_aws_names_for_tables_list}
     See metadata_ files and original files in the new 'transfered_files' directory'
     Please check dynamoDB tables to see that datatypes and data transfer is satisfactory. 
     """
