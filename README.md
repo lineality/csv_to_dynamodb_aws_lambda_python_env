@@ -22,7 +22,8 @@ A tool for loading .csv files into DynamoDB should be as simple as "load files" 
 Upload your .csv files to AWS-S3 (AWS file storage). Point the tool to the file folder in S3. Hit 'Go' (activate the lambda function). That's all. 
 
 ## Overview and Introduction
-#### The process of transferring data from a .csv file (for example) into a data table in dynamoDB (an AWS database) (without tools such as this project aims to provide) is not simple. Yet going the other direction, making a .csv from a data table is very simple: just one "make a .csv" button to push. Both should be easy.
+#### Making a .csv from a data-table in AWS-DynamoDB is very simple: there is just one "make a .csv" button to push. Going in the other direction, putting .csv file data into a dynamoDB data-table, should ideally be just as easy...but it is not. This tool was created to make the processing of entering .csv file data just as easy as pushing a button. 
+
 
 ## List of properties a .csv file needs to have for it to be ready to be entered into a database table (using this automated system):
 1. the name of the .csv file must be formatted to be also the name of the table
