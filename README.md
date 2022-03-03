@@ -16,6 +16,10 @@ A tool for loading .csv files into DynamoDB should be as simple as "load files" 
 9. It will automatically create the data table, the fields, and the data-types, including the primary-key field. 
 10. It should be flexibly an (optionally) all-inside-AWS solution, not requiring anyone to have additional special hardware or software, and also allow steps to be done outside of AWS such as analyzing a .csv and the metadata on your local computer. 
 11. It should help with generating unique primary key fields(columns).  
+12. It should soft-time-out for jobs involving very large datasets
+13. It should allow a no-pandas mode to avoid formatting issues
+14. It should allow for as many data types as possible
+15. It should allow for specific secondary sort key creation
 
 ### Brief instructions for deployment and use of this tool: 
 #### Recombine the zipped uploadable python environment and upload it into an AWS Lambda Function. ( See this guide for splitting and recombining zip archives: https://github.com/lineality/linux_make_split_zip_archive_multiple_small_parts_for_AWS )
@@ -105,7 +109,6 @@ Years_Experience,N,float64,11.1,False,False,True
 Salary,N,int64,39343.0,False,False,False
 
 ```
-
 # Rules / Instructions
  
 ## Cheat Sheet Instruction Summary
@@ -160,6 +163,22 @@ If you want to use the tool to ONLY make your file inspection meta_data files an
 ```
 A critical part of understanding your data is making sure that your primary-key, your first column, does not have problems that will prevent that column from being a primary key, if there is a problem then you cannot use that column as your primary key, and will you need to pick (or create (see below)) another column to be the primary key or fix the errors in that column. The meta-data file will help you to examine.
  
+Here is an example of a minimal metadata file that the tool needs:
+```
+column_name,AWS_column_dtype,
+row_number,N,
+Years_Experience,N,
+Salary,N
+```
+Here is an example of a metadata file with more fields for data exploration:
+```
+column_name,AWS_column_dtype,pandas_column_dtype,example_item_list,mixed_datatype_flag_list,missing_data_flag_list,duplicate_data_flag_list
+row_number,N,int64,11.0,False,False,False
+Years_Experience,N,float64,11.1,False,False,True
+Salary,N,int64,39343.0,False,False,False
+```
+ 
+ 
 4. This tool is an AWS lambda function which is or operates like an api-endpoint.
  
 5. json-input:
@@ -190,8 +209,9 @@ Here is an example using all optional fields (not all can be used together, to b
  "FROM_here_in_csv": 0,
  "TO_here_in_csv": 4,
  "set_split_threshold_default_is_10k_rows": 5000,
- "just_make_metadata_files_flag": False,
- "just_make_new_primary_key_first_column": "CSV_FILE_THAT_NEEDS_THE_ROW"
+ "just_make_metadata_files_flag": "False",
+ "just_make_new_primary_key_first_column": "CSV_FILE_THAT_NEEDS_THE_ROW",
+ "timer_set_for_minutes_float": 5.5
 }
 ```
 But to not mix levels of directories. S3 is not a real file system, and any sub-folder in the folder that you want will be seen as just more files in that main folder (not files in a subfolder).
@@ -249,12 +269,18 @@ Please report all errors we can understand this process well.
  
 11. Please check the new data-tables in AWS to make sure they look as you want them to look.
  
-12. From To:
-The default mode is to put one data-csv file into one dynamoDB table,
-however you can select from-to for which rows you want to select to upload.
-This from-to will disable moving completed files.
-From-to cannot be used along with split-multi files.
-Starting at 1 or 0 have the same effect, starting from the begining.
+12. FROM_here / TO_here:
+The default mode is to put one whole data-csv file into one dynamoDB table.
+However, you can use FROM_here / TO_here choose exactly which rows you want to select to upload.
+ 
+Important notes:
+- Only use with a single file loaded into the S3 folder.
+- This from-to will disable moving completed files.
+- From-to cannot be used along with split-multi files.
+- Starting at 1 or 0 have the same effect, starting from the begining.
+- From-To is not compatible with splitting one csv into many smaller csv files.
+ 
+Example:
 ```
 {
  "s3_bucket_name": "YOUR_BUCKET_NAME",
@@ -287,6 +313,24 @@ Note: be careful about mixing split and many other non-split files together, as 
 Timing Out: The reason why large files must be split is that a lambda function has a maximum time (15min) for how long it can run. If a big .csv file takes more time than 15min, the process will crash in the middle and no progress can be made by re-running the tool. On the other hand, if the S3 folder contains many small files (that each take much less than 15 minutes to run) then running the lambda function over and over will gradually process all of the files. Note that there will still be an error returned when the lambda function times out.
  
 14. You will get an error if you try to use split-file and from-to at the same time.
+ 
+15. This tool can handles many of the datatypes available in dynamoDB: (N) Number, (S) String,
+number sets, and string sets (NS, SS, BS types) are lists of strings or numbers. a map "m" is a json object, etc.
+https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_AttributeValue.html
+ 
+If you use datatype not found in pandas (lists, sets, maps, etc.) then you will need to manually set the metadata_ file to set what datatype that rather exotic column/field/attribute is.
+ 
+Sets (SS, NS, etc) are entered just as strings of strings, NOT as sets tuples etc (despite documentation to the contrary). e.g. "'one','two','three'"
+ 
+16. Time Out: Hard time out vs. soft time out
+You can set a timer for a soft and orderly time out which will report to you which files were completed and which are still to go. (In the case of a hard time out the tool simply haults in the middle of whatever it is doing and reports nothing on progress. The soft time out will exit before starting any new jobs after your specified time. As long as your split files are small enough you should be able to avoid a hard time out.
+``` 
+{
+ "set_split_threshold_default_is_10k_rows": 5000,
+ "timer_set_for_minutes_float": 5.5
+}
+```
+ 
  
  
 
