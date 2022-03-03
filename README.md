@@ -7,19 +7,19 @@ This is a solution to easily and automatically load .csv (comma, tab, etc. delim
 A tool for loading .csv files into DynamoDB should be as simple as "load files" -> "push go" -> "done!" including the following features:
 1. It works on a whole folder/directory of files (not just one file at a time).
 2. It allows the user to select from_this_row and to_this_row in case only part of a file is to be uploaded (optionally, if desired).
-3. It allows for the user to manually specify column data types and column names IF needed, but does not require this by default. 
+3. It allows for the user to manually specify each column's data-type and column-names IF needed, but does not require this by default. 
 4. It allows for very large file sizes automatically (with no user action needed). 
-5. It should allow for missing data in the .csv files. 
-6. It should allow you to create metadata files and inspect csv files for general properties and potential problems. 
-7. It should allow split-csv or multiple files to be automatically merged into the same data table.
-8. It should manage very large files by automatically splitting them into smaller units, and splitting multiple files in the same batch should be allowed.
-9. It actively scans for problems with the files and if found reports those to the user. 
-10. It will automatically create the data table, the fields, and the data-types, including the primary-key field. 
-11. It should be flexibly an (optionally) all-inside-AWS solution, not requiring anyone to have additional special hardware or software, and also allow steps to be done outside of AWS such as analyzing a .csv and the metadata on your local computer. 
-12. It should help with generating unique primary key fields(columns).  
-13. It should soft-time-out for jobs involving very large datasets.
-14. It should allow a no-pandas mode to avoid formatting issues.
-15. It should allow for as many data types as possible.
+5. It should allow for missing data in the .csv files (though not in the primary key field). 
+6. It should allow you to create metadata files to help you to inspect .csv files for general properties and potential problems. 
+7. It should allow either split-csv or multiple files to be automatically merged into the same data table.
+8. It should manage very large files by automatically splitting them into smaller units, and performing this on multiple files in the same batch.
+9. It actively scans for problems with the files and if found reports those to the user  (missing_data_flag ,duplicate_data_flag). 
+10. It will automatically create the data table, the fields, and the data-types, including the primary-key field (based just on the given csv file). 
+11. It should be flexibly (optionally)  an all-inside-AWS solution, not requiring anyone to have additional special hardware or software, while optionally allowing steps to be done outside of AWS such as analyzing a .csv and the metadata on your local computer. 
+12. It should help with routine needs such as creating a new generating unique primary key field(columns).  
+13. It should soft-time-out for jobs involving very large datasets, giving output about what has and has not been completed.
+14. It should allow a no-pandas mode to avoid formatting & data-type issues. (pending)
+15. It should allow for as many data types as possible (including lists and sets)
 16. It should allow for specific secondary sort key creation. (pending)
 
 ### Brief instructions for deployment and use of this tool: 
