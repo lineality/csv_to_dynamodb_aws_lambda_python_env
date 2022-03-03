@@ -12,14 +12,15 @@ A tool for loading .csv files into DynamoDB should be as simple as "load files" 
 5. It should allow for missing data in the .csv files. 
 6. It should allow you to create metadata files and inspect csv files for general properties and potential problems. 
 7. It should allow split-csv or multiple files to be automatically merged into the same data table.
-8. It actively scans for problems with the files and if found reports those to the user. 
-9. It will automatically create the data table, the fields, and the data-types, including the primary-key field. 
-10. It should be flexibly an (optionally) all-inside-AWS solution, not requiring anyone to have additional special hardware or software, and also allow steps to be done outside of AWS such as analyzing a .csv and the metadata on your local computer. 
-11. It should help with generating unique primary key fields(columns).  
-12. It should soft-time-out for jobs involving very large datasets.
-13. It should allow a no-pandas mode to avoid formatting issues.
-14. It should allow for as many data types as possible.
-15. It should allow for specific secondary sort key creation.
+8. It should manage very large files by automatically splitting them into smaller units, and splitting multiple files in the same batch should be allowed.
+9. It actively scans for problems with the files and if found reports those to the user. 
+10. It will automatically create the data table, the fields, and the data-types, including the primary-key field. 
+11. It should be flexibly an (optionally) all-inside-AWS solution, not requiring anyone to have additional special hardware or software, and also allow steps to be done outside of AWS such as analyzing a .csv and the metadata on your local computer. 
+12. It should help with generating unique primary key fields(columns).  
+13. It should soft-time-out for jobs involving very large datasets.
+14. It should allow a no-pandas mode to avoid formatting issues.
+15. It should allow for as many data types as possible.
+16. It should allow for specific secondary sort key creation. (pending)
 
 ### Brief instructions for deployment and use of this tool: 
 #### Recombine the zipped uploadable python environment and upload it into an AWS Lambda Function. ( See this guide for splitting and recombining zip archives: https://github.com/lineality/linux_make_split_zip_archive_multiple_small_parts_for_AWS )
